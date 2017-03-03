@@ -24,25 +24,83 @@
     </div>
   </div>
 
-  <div class="hide">
-    <h2 class="ui dividing header">Opendime<super>&trade;</super></h2>
-
-    <div class="ui card floated left">
-      <div class="content">
-        <div id="main_qr" class="qrcode"></div>
-      </div>
-      <div class="content">
-        <span class="header">1ssdkjfskjdfhsdfldkfj</span>
-      </div>
-      <div class="extra content">
-        <button class="ui labeled icon button small">
-            <i class="clipboard icon"></i> Copy to clipboard
-        </button>
-      </div>
-    
+  <div class="ui basic modal" id="fresh-modal">
+    <div class="header">Factory Fresh</div>
+    <div class="content">
+      <p>
+        This Opendime is fresh from the factory and
+        hasn't yet picked a Bitcoin payment address.
+      </p>
     </div>
 
-    <p>more text here</p>
+    <div class="actions">
+      <button class="ui approve button">Pick One Now</button>
+    </div>
+  </div>
+
+  <div class="ui row">
+    <h2 class="ui header">Opendime<super>&trade;</super></h2>
+    <br>
+  </div>
+
+  <div class="ui two column stackable grid">
+    <div class="six wide column">
+
+
+      <div class="ui card">
+        <div class="content">
+          <div id="main-qr" class="qrcode"></div>
+        </div>
+        <div class="content">
+          <code class="js-stateful js-addr btc-addr"></code>
+        </div>
+        <div class="extra content">
+          <button class="ui labeled icon button small">
+              <i class="clipboard icon"></i> Copy to clipboard
+          </button>
+        </div>
+      </div>
+
+    </div>
+    <div class="ten wide column">
+
+      <div class="ui icon negative message js-unsealed-warn">
+        <i class="warning sign icon"></i>
+        <div class="content">
+          <div class="header">
+            Unsealed!
+          </div>
+          <p>
+            <b>DO NOT</b> send more funds to this address or accept this hardware as payment.
+          </p>
+        </div>
+      </div>
+
+      <h4 class="ui dividing header"> Get Balance </h4>
+
+      <p>
+        To learn the balance of this Opendime, you need to consult online with
+        the blockchain. You can do that via any of these services. Be aware they
+        may track your IP address and link it to this address.
+      </p>
+
+      <a class="ui button js-bce positive" href="https://opendime.com/balance/PUBKEY" rel="noreferrer">Opendime.com</a>
+        <br>
+
+      <div class="ui mini buttons">
+        <a class="ui button js-bce " href="https://blockchain.info/address/PUBKEY" rel="noreferrer">Blockchain.info</a>
+        <a class="ui button js-bce" href="https://www.blocktrail.com/BTC/address/PUBKEY" rel="noreferrer">Blocktrail</a>
+        <a class="ui button js-bce" href="https://btc.blockr.io/address/info/PUBKEY" rel="noreferrer">Blockr.io</a>
+      </div>
+
+      <div class="ui mini buttons">
+        <a class="ui button js-bce" href="https://localbitcoinschain.com/address/PUBKEY" rel="noreferrer">LocalBitcoins</a>                         
+        <a class="ui button js-bce" href="https://bitinfocharts.com/bitcoin/address/PUBKEY" rel="noreferrer">BitInfoCharts</a>
+        <a class="ui button js-bce" href="blockchain:/address/PUBKEY" rel="noreferrer" title="Use BIP 122 link to open your favourite block explorer">BIP122 link</a>
+      </div>
+
+
+    </div>
 
   </div>
 

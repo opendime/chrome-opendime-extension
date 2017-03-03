@@ -20,6 +20,7 @@ about migrating your app._
 - <https://developer.chrome.com/apps/app_usb> USB interface stuff
 - <https://developer.chrome.com/apps/api_index> useful index page
 - <http://semantic-ui.com/examples/theming.html> Sematic UI CSS cheatsheet
+- <https://davidshimjs.github.io/qrcodejs/> for QR code rendering
 
 # Useful Chrome internal links
 

@@ -156,120 +156,92 @@ function encode_hex(data)
 
 function probe_opendime(od_dev, serial_number)
 {
-    var vars = { 'sn': serial_number };
+    var vars = { sn: serial_number, is_fresh: false, is_sealed: true, is_v1: false }
 
     // get all bitcoin-related values
     get_value(od_dev, 3, 64, function(rc, d) {
         if(rc) {
             console.log("is fresh");
-            vars['fresh'] = true;
+            vars.is_fresh = true;
         } else {
-            vars['ad'] = decode_utf8(d);
+            vars.ad = decode_utf8(d);
 
             get_value(od_dev, 2, 64, function(rc, d) {
                 if(!rc) {
-                    vars['pk'] = decode_utf8(d);
+                    vars.pk = decode_utf8(d);
+                    vars.is_sealed = false;
                 }
             });
         }
     });
 
-    // get v2 values
+    // get V2-related values
     get_value(od_dev, 8, 16, function(rc, d) {
         if(rc) {
-            vars['v1'] = true;
+            vars.is_v1 = true;
         } else {
-            vars['ae'] = encode_hex(d);
+            vars.ae = encode_hex(d);
             get_value(od_dev, 7, 1000, function(rc, d) {
                 if(!rc) {
-                    vars['cert'] = decode_utf8(d);
+                    vars.cert = decode_utf8(d);
                 }
             });
         }
     });
 
-    console.log("vars", vars);
+    // ... don't know how we're supposed to know 
+    // the above process has compelted?!?
+    setTimeout(function() {
 
-/*
-    // read everything.
-  var ti = {
-    "requestType": "vendor",
-    "recipient": "device",
-    "direction": "in",
-    "request": 0,
-    "value": 96,        // firmware checksum
-    "index": 0,
-    "length": 32,
-    "data": new ArrayBuffer(32)
-  };
-  chrome.usb.controlTransfer(od_dev, ti, sendCompleted);
-
-  ti = {
-    "requestType": "vendor",
-    "recipient": "device",
-    "direction": "out",
-    "request": 0,
-    "value": 103,       // 'g'
-    "index": 0,
-    "length": 0,
-    "data": new ArrayBuffer(0)
-  };
-  chrome.usb.controlTransfer(od_dev, ti, sendCompleted);
-*/
-/*
-  var ti = {
-    "requestType": "vendor",
-    "recipient": "device",
-    "direction": "in",
-    "request": 0,
-    "value": 7,        // unit.crt
-    "index": 0,
-    "length": 960,
-    "data": new ArrayBuffer(960)
-  };
-  chrome.usb.controlTransfer(od_dev, ti, function(usbEvent) {
-      if(usbEvent && usbEvent.data) {
-          var utf8 = new TextDecoder('ascii')
-          var buf = new Uint8Array(usbEvent.data);
-          console.log("event = ", usbEvent);
-          console.log("Unit.crt = ", utf8.decode(buf));
-console.trace();
-        }
-    });
-*/
-
+        console.log("vars", vars);
+        render_state(vars);
+        start_verify(vars);
+    }, 200);
 }
 
-var check_interf = function(od_dev, interfaces) {
-    // check the USB interface properties are what we expect
-    console.log("Interfaces: ", interfaces);
-
-    if(    (interfaces.length == 1)
-        && (interfaces[0].interfaceClass == 8)
-        && (interfaces[0].endpoints.length == 2)
-        && (interfaces[0].endpoints[0].maximumPacketSize == 64)
-        && (interfaces[0].endpoints[1].maximumPacketSize == 64)
-    ) {
-        console.log("USB interface looks right!");
-
-        probe_opendime(od_dev);
-    } else {
-        console.log("Failed basic checks")
-    }
-};
-
-var show_qr = function(data)
+function render_state(vars)
 {
-    var qrcode = new QRCode("main_qr", {
+    // reset much
+    $('.js-stateful').text('');
+    $('.js-unsealed-warn').hide();
+
+    if(vars.is_fresh) {
+        $('#fresh-modal').modal('show');
+
+        return;
+    }
+
+    if(!vars.is_sealed) {
+        $('.js-unsealed-warn').show();
+    }
+
+    // bitcoin addr
+    $('.js-addr').text(vars.ad);
+    show_qr(vars.ad);
+}
+
+function start_verify(vars)
+{
+    if(!vars.is_fresh) {
+        // can always check the bitcoin signatures
+    }
+    
+    if(!vars.is_v1) {
+        // do the new hard stuff
+    }
+}
+
+function show_qr(data)
+{
+    var el = $('#main-qr');
+
+    var qrcode = new QRCode('main-qr', {
         text: data,
-        width: 200,
-        height: 200,
+        // width: 300, height: 300,
         colorDark : "#000000",
         colorLight : "#ffffff",
         correctLevel : QRCode.CorrectLevel.H
     });
-
-    var el = $('#main_qr');
 };
 
 function have_permission(result)
@@ -384,9 +356,20 @@ if(chrome.permissions) {
       }
     });
 } else {
-    // Local debug case, not an app
+    // Local debug case, when not an app
 
     // (uncomment to test modal, but ok button doesn't work)
     //$('#perms-modal').modal('show');
     //ask_for_permission();
+    var vars = 
+{"sn":"4QR6SUSUJVGVCIBAEBDTIHQK74","is_fresh":false,"is_sealed":false,"is_v1":false,"ad":"1E8t4b3bSoVPGPW84D2i8pJs3ckK6fuRaH","ae":"c5adbafe8b3d","pk":"5KZ13kVzh9G8m7B6cS8QxQQ6E37wRwTgHAcoKEAPRe7vs1rxuXH","cert":"-----BEGIN CERTIFICATE-----\nMIICbzCCAVegAwIBAgIIPE25afsphhMwDQYJKoZIhvcNAQELBQAwFjEUMBIGA1UE\nAwwLQmF0Y2ggIzEgQ0EwHhcNMTcwMzAxMDAwMDAwWhcNMzcwMTAxMDAwMDAwWjBF\nMTAwLgYDVQQFEyc0UVI2U1VTVUpWR1ZDSUJBRUJEVElIUUs3NCtjNWFkYmFmZThi\nM2QxETAPBgNVBAMMCE9wZW5kaW1lMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE\nAHhk+Wudf27ye/x0Xi+6Kx4UB2ib8iz98metsYN3vlwWydtBEeR8HDkAn5xOVXmT\nTWQVpkg2kmrnAS4sbYxWx6NdMFswHwYDVR0jBBgwFoAUnYVWYkYMVgGc59hdR/k0\nTaG3yJAwCQYDVR0TBAIwADAdBgNVHQ4EFgQU6Bezb+VFDNezZNVSPjNijSYaLeQw\nDgYDVR0PAQH/BAQDAgeAMA0GCSqGSIb3DQEBCwUAA4IBAQCtvuw8geubwGhR0GK2\noq9Tfz65vLgIYsEkatgyJQewDgUk3mzErzNVmKw45V7EIsnBZIMRHFV0W2qge/9Y\nRc4yTsjbf6+h+47sU+2KIVjMe55vW71VSv7JzVOJEvmfZxNdYSlxYAf7hhNT4rOf\nuOuUMDZKMfkoMEBtp1pulgpL7/hE+ZbNxDaSKxbKquvgeMzEkrmPmB8YQtdVpupN\nqQTmC+mdRPMxqBRtxLjPH07Tbu/E8JnmI2uRxgYvnFQtTjYaEHDFOS+kEVO6SOID\nU/QfGw7DbvYvhBmxbHG2YHEst9nyqkhUNbABSpGlAz71njpFvcE9e+jCRZAoYrOX\nD49m\n-----END CERTIFICATE-----\n                                                      \r\n"};
+
+    // pretend it's sealed...
+    //vars.is_sealed = true;
+    // pretend it's brand new
+    //vars.is_fresh = true;
+
+    render_state(vars);
 }
+
+$('.js-bce').attr({target: "_blank"});
