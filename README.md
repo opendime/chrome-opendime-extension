@@ -18,6 +18,7 @@ about migrating your app._
 
 - <https://developer.chrome.com/apps> top level docs
 - <https://developer.chrome.com/apps/app_usb> USB interface stuff
+- <https://developer.chrome.com/apps/api_index> useful index page
 
 # Useful Chrome internal links
 

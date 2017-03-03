@@ -13,6 +13,9 @@
       "scripts": ["background.js"]
     }
   },
+  "icons": {
+    "512": "img/logo-512.png"
+  },
   "permissions": [
     "usb",
     "clipboardWrite"
