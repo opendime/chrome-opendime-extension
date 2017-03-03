@@ -1,14 +1,35 @@
 <!DOCTYPE html>
 <html><head>
-<title>Opendime Helper</title>
+  <title>Opendime</title>
 
-<link rel="stylesheet" type="text/css" href="libs/semantic.min.css">
-<script src="libs/jquery-3.1.1.min.js"></script>
-<script src="libs/semantic.min.js"></script>
+  <link rel="stylesheet" type="text/css" href="libs/semantic.min.css">
+  <link rel="stylesheet" type="text/css" href="css/style.css">
+  <script src="libs/jquery-3.1.1.min.js"></script>
+  <script src="libs/semantic.min.js"></script>
+  <script src="libs/qrcode.min.js"></script>
 
 </head><body>
-    <h1>Opendime Helper</h1>
-    <button id="requestPermission">Request permissions</button>
-    <script src="code.js"></script>
-  </body>
-</html>
+
+    <h2 class="ui dividing header">Opendime<super>&trade;</super></h2>
+
+    <button id="requestPermission" class="ui primary button">Request permissions</button>
+
+    <div class="ui centered card">
+      <div class="content">
+        <div id="main_qr" class="qrcode"></div>
+      </div>
+      <div class="content">
+        <span class="header">1sldkfj</span>
+      </div>
+      <div class="extra content">
+        <a href="https://opendime.com/balance/XXX"><i class="arrow right icon"></i> Opendime.com</a>
+      </div>
+    
+    </div>
+
+
+
+
+    <script src="code.js"></script> <!-- keep last -->
+
+</body></html>

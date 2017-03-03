@@ -14,11 +14,12 @@ extensions on all platforms. Read the announcement and learn more
 about migrating your app._
 
 
-# Reference Sources
+# References
 
 - <https://developer.chrome.com/apps> top level docs
 - <https://developer.chrome.com/apps/app_usb> USB interface stuff
 - <https://developer.chrome.com/apps/api_index> useful index page
+- <http://semantic-ui.com/examples/theming.html> Sematic UI CSS cheatsheet
 
 # Useful Chrome internal links
 

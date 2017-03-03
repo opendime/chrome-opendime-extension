@@ -147,9 +147,23 @@ var check_interf = function(od_dev, interfaces) {
     }
 };
 
+var show_qr = function(data)
+{
+    var qrcode = new QRCode("main_qr", {
+        text: data,
+        width: 200,
+        height: 200,
+        colorDark : "#000000",
+        colorLight : "#ffffff",
+        correctLevel : QRCode.CorrectLevel.H
+    });
+
+    var el = $('#main_qr');
+};
+
 var gotPermission = function(result) {
     requestButton.style.display = 'none';
-    knob.style.display = 'block';
+    //knob.style.display = 'block';
     console.log('App was granted the "usbDevices" permission.');
     chrome.usb.findDevices( DEVICE_INFO,
       function(devices) {
@@ -161,6 +175,7 @@ var gotPermission = function(result) {
         var od_dev = devices[0];
         chrome.usb.listInterfaces(od_dev, function(ifs) { check_interf(od_dev, ifs);} );
     });
+
   };
 
 var permissionObj = {permissions: [{'usbDevices': [DEVICE_INFO] }]};
@@ -176,11 +191,13 @@ requestButton.addEventListener('click', function() {
   });
 });
 
-chrome.permissions.contains(permissionObj, function(result) {
-  if (result) {
-    gotPermission();
-  }
-});
+if(chrome.permissions) {
+    chrome.permissions.contains(permissionObj, function(result) {
+      if (result) {
+        gotPermission();
+      }
+    });
+}
 
 function setLEDBrightness(brightness) {
   if ((brightness >= 0) && (brightness <= 255)) {
