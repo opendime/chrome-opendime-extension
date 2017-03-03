@@ -112,7 +112,7 @@ var probe_opendime = function(od_dev)
     "recipient": "device",
     "direction": "in",
     "request": 0,
-    "value": 97,        // unit.crt
+    "value": 7,        // unit.crt
     "index": 0,
     "length": 960,
     "data": new ArrayBuffer(960)
@@ -161,9 +161,7 @@ var show_qr = function(data)
     var el = $('#main_qr');
 };
 
-var gotPermission = function(result) {
-    requestButton.style.display = 'none';
-    //knob.style.display = 'block';
+var have_permission = function(result) {
     console.log('App was granted the "usbDevices" permission.');
     chrome.usb.findDevices( DEVICE_INFO,
       function(devices) {
@@ -180,23 +178,39 @@ var gotPermission = function(result) {
 
 var permissionObj = {permissions: [{'usbDevices': [DEVICE_INFO] }]};
 
-requestButton.addEventListener('click', function() {
-  chrome.permissions.request( permissionObj, function(result) {
-    if (result) {
-      gotPermission();
-    } else {
-      console.log('App was not granted the "usbDevices" permission.');
-      console.log(chrome.runtime.lastError);
-    }
-  });
-});
+function ask_for_permission() {
+    $('#perms-modal').modal({
+        closable: false,
+        onApprove: function() {
+            chrome.permissions.request(permissionObj, function(result) {
+                if(result) {
+                  have_permission();
+                } else {
+                  console.log('App was not granted the "usbDevices" permission!');
+                  console.log(chrome.runtime.lastError);
+
+                  return false;
+                }
+              })
+            },
+        }).modal('show');
+}
+
 
 if(chrome.permissions) {
     chrome.permissions.contains(permissionObj, function(result) {
-      if (result) {
-        gotPermission();
+      if(result) {
+        have_permission();
+      } else {
+        ask_for_permission();
       }
     });
+} else {
+    // Local debug case, not an app
+
+    // (uncomment to test modal, but ok button doesn't work)
+    //$('#perms-modal').modal('show');
+    //ask_for_permission();
 }
 
 function setLEDBrightness(brightness) {
