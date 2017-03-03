@@ -1,13 +1,11 @@
+
+// Details of our hardware's USB specs
 var VENDOR_ID = 0xD13E;
 var PRODUCT_ID = 0x0100;
 var DEVICE_INFO = {"vendorId": VENDOR_ID, "productId": PRODUCT_ID};
+var permissionObj = {permissions: [{'usbDevices': [DEVICE_INFO] }]};
 
 var od_dev;
-var knob = document.getElementById('knob');
-var requestButton = document.getElementById("requestPermission");
-
-var amount = 0;
-var ROTATE_DEGREE = 4;
 
 var transfer = {
   direction: 'in',
@@ -79,8 +77,119 @@ def set_debug_value(dev, code, expect_works=True, data=None):
     
 */
 
-var probe_opendime = function(od_dev)
+function get_value(od_dev, index, max_resp, callback)
 {
+  var ti = {
+    "requestType": "vendor",
+    "recipient": "device",
+    "direction": "in",
+    "request": 0,
+    "value": index,        // firmware checksum
+    "index": 0,
+    "length": max_resp,
+    "data": new ArrayBuffer(max_resp)
+  };
+
+  chrome.usb.controlTransfer(od_dev, ti, function(usbEvent) {
+/* not really an error if we expect it and so on.
+      if (chrome.runtime.lastError) {
+        console.error("sendCompleted Error:", chrome.runtime.lastError);
+      }
+*/
+      err = chrome.runtime.lastError;
+
+      if(usbEvent) {
+/*
+        if(usbEvent.resultCode !== 0) {
+          console.error("Error writing to device", usbEvent.resultCode);
+        }
+        if (usbEvent.data) {
+        }
+*/
+        callback(usbEvent.resultCode, usbEvent.data);
+      } else {
+        callback(err);
+      }
+  });
+}
+
+function decode_utf8(data)
+{
+    var utf8 = new TextDecoder('ascii')
+    var buf = new Uint8Array(data);
+    return utf8.decode(buf);
+}
+
+function encode_hex(data)
+{
+    const byteArray = new Uint8Array(data);
+    const hexParts = [];
+    for(let i = 0; i < byteArray.length; i++) {
+        const hex = byteArray[i].toString(16);
+        const paddedHex = ('00' + hex).slice(-2);
+
+        hexParts.push(paddedHex);
+    }
+
+    return hexParts.join('');
+}
+
+/*
+1 | Secret exponent (if unsealed)
+2 | WIF version of private key (if unsealed)
+3 | Bitcoin payment address (if set yet)
+4 | Result of previous signature request (`m` or `f`), 65 or 96 bytes
+5 | Firmware checksum (32 bytes)
+6 | Firmware version as a string
+7 | Readback unit x.509 certificate `unit.crt`
+8 | Serial number of ATECC508A chip (6 bytes)
+9 | Readback number of bytes entropy so far (unsigned LE32)
+
+"ad": "1E8t4b3bSoVPGPW84D2i8pJs3ckK6fuRaH   ",
+"pk": "5KZ13kVzh9G8m7B6cS8QxQQ6E37wRwTgHAcoKEAPRe7vs1rxuXH",
+"ex": "e4af8379ce016e415c2fe6d2962958c7fafa95c13bced23ee9356a5cf1c7c156",
+"on": "6778b1e7e0f28c1fd38d0c488b06ad230c8846a10f8471e5da30e431b48d10b0",
+"sn": "4QR6SUSUJVGVCIBAEBDTIHQK74",
+"ae": "c5adbafe8b3d",
+"va": "nonce:7a4600e32459949aec42052a|1E8t4b3bSoVPGPW84D2i8pJs3ckK6fuRaH|Gz2xhXdrK7q9UKKpTzFN0sr02AR97BTgkBTMHwtDxnpGIt74zJ6TYJtvRO2co7_kMMQ__GC73OKXPZO43_y6ZOk|U"           
+*/
+
+function probe_opendime(od_dev, serial_number)
+{
+    var vars = { 'sn': serial_number };
+
+    // get all bitcoin-related values
+    get_value(od_dev, 3, 64, function(rc, d) {
+        if(rc) {
+            console.log("is fresh");
+            vars['fresh'] = true;
+        } else {
+            vars['ad'] = decode_utf8(d);
+
+            get_value(od_dev, 2, 64, function(rc, d) {
+                if(!rc) {
+                    vars['pk'] = decode_utf8(d);
+                }
+            });
+        }
+    });
+
+    // get v2 values
+    get_value(od_dev, 8, 16, function(rc, d) {
+        if(rc) {
+            vars['v1'] = true;
+        } else {
+            vars['ae'] = encode_hex(d);
+            get_value(od_dev, 7, 1000, function(rc, d) {
+                if(!rc) {
+                    vars['cert'] = decode_utf8(d);
+                }
+            });
+        }
+    });
+
+    console.log("vars", vars);
+
 /*
     // read everything.
   var ti = {
@@ -107,6 +216,7 @@ var probe_opendime = function(od_dev)
   };
   chrome.usb.controlTransfer(od_dev, ti, sendCompleted);
 */
+/*
   var ti = {
     "requestType": "vendor",
     "recipient": "device",
@@ -126,6 +236,7 @@ var probe_opendime = function(od_dev)
 console.trace();
         }
     });
+*/
 
 }
 
@@ -161,24 +272,29 @@ var show_qr = function(data)
     var el = $('#main_qr');
 };
 
-var have_permission = function(result) {
-    console.log('App was granted the "usbDevices" permission.');
-    chrome.usb.findDevices( DEVICE_INFO,
+function have_permission(result)
+{
+    // TODO: block any attempt to work with 2+ opendimes at once.
+
+    // cannot use findDevices because I want to serial number!
+    chrome.usb.getDevices( DEVICE_INFO,
       function(devices) {
         if (!devices || !devices.length) {
           console.log('device not found');
           return;
         }
-        console.log('Found device: ' + devices[0].handle);
-        var od_dev = devices[0];
-        chrome.usb.listInterfaces(od_dev, function(ifs) { check_interf(od_dev, ifs);} );
+        const sn = devices[0].serialNumber;
+        console.log('Found device: ' + sn, devices[0]);
+        chrome.usb.openDevice(devices[0], function(ch) {
+            probe_opendime(ch, sn);
+        });
     });
 
-  };
+}
 
-var permissionObj = {permissions: [{'usbDevices': [DEVICE_INFO] }]};
 
-function ask_for_permission() {
+function ask_for_permission()
+{
     $('#perms-modal').modal({
         closable: false,
         onApprove: function() {
@@ -196,22 +312,6 @@ function ask_for_permission() {
         }).modal('show');
 }
 
-
-if(chrome.permissions) {
-    chrome.permissions.contains(permissionObj, function(result) {
-      if(result) {
-        have_permission();
-      } else {
-        ask_for_permission();
-      }
-    });
-} else {
-    // Local debug case, not an app
-
-    // (uncomment to test modal, but ok button doesn't work)
-    //$('#perms-modal').modal('show');
-    //ask_for_permission();
-}
 
 function setLEDBrightness(brightness) {
   if ((brightness >= 0) && (brightness <= 255)) {
@@ -255,19 +355,6 @@ function sendCommand(request, val, idx) {
   chrome.usb.controlTransfer(od_dev, ti, sendCompleted);
 }
 
-function buf2hex(byteArray)
-{
-  const hexParts = [];
-  for(let i = 0; i < byteArray.length; i++) {
-    const hex = byteArray[i].toString(16);
-    
-    const paddedHex = ('00' + hex).slice(-2);
-    
-    hexParts.push(paddedHex);
-  }
-  
-  return hexParts.join('');
-}
 
 
 function sendCompleted(usbEvent) {
@@ -286,10 +373,20 @@ function sendCompleted(usbEvent) {
   }
 }
 
+// Startup code.
+//
+if(chrome.permissions) {
+    chrome.permissions.contains(permissionObj, function(result) {
+      if(result) {
+        have_permission();
+      } else {
+        ask_for_permission();
+      }
+    });
+} else {
+    // Local debug case, not an app
 
-/* some fun commands to try:
- *   sendCommand(1, 0x0104, 0x3002) // fast flashing
- *   sendCommand(1, 0x0104, 0xff02) // fastest flashing possible
- *   sendCommand(1, 0x0104, 0xff01) // normal speed flashing
- *   sendCommand(1, 0x0104, 0x0f00) // super slow flashing
- */
+    // (uncomment to test modal, but ok button doesn't work)
+    //$('#perms-modal').modal('show');
+    //ask_for_permission();
+}
