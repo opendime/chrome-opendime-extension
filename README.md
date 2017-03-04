@@ -39,6 +39,8 @@ for years anyway...
 open main.html
 ```
 
+- note app window is currently coded to be 800x600px but we can change that
+
 # Debug As Extension.
 
 To debug/change it as an extension, go to `chrome://extensions/` and...

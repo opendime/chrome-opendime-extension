@@ -425,10 +425,10 @@ if(chrome.permissions) {
 {"sn":"4QR6SUSUJVGVCIBAEBDTIHQK74","is_fresh":false,"is_sealed":false,"is_v1":false,"ad":"1E8t4b3bSoVPGPW84D2i8pJs3ckK6fuRaH","ae":"c5adbafe8b3d","pk":"5KZ13kVzh9G8m7B6cS8QxQQ6E37wRwTgHAcoKEAPRe7vs1rxuXH","cert":"-----BEGIN CERTIFICATE-----\nMIICbzCCAVegAwIBAgIIPE25afsphhMwDQYJKoZIhvcNAQELBQAwFjEUMBIGA1UE\nAwwLQmF0Y2ggIzEgQ0EwHhcNMTcwMzAxMDAwMDAwWhcNMzcwMTAxMDAwMDAwWjBF\nMTAwLgYDVQQFEyc0UVI2U1VTVUpWR1ZDSUJBRUJEVElIUUs3NCtjNWFkYmFmZThi\nM2QxETAPBgNVBAMMCE9wZW5kaW1lMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE\nAHhk+Wudf27ye/x0Xi+6Kx4UB2ib8iz98metsYN3vlwWydtBEeR8HDkAn5xOVXmT\nTWQVpkg2kmrnAS4sbYxWx6NdMFswHwYDVR0jBBgwFoAUnYVWYkYMVgGc59hdR/k0\nTaG3yJAwCQYDVR0TBAIwADAdBgNVHQ4EFgQU6Bezb+VFDNezZNVSPjNijSYaLeQw\nDgYDVR0PAQH/BAQDAgeAMA0GCSqGSIb3DQEBCwUAA4IBAQCtvuw8geubwGhR0GK2\noq9Tfz65vLgIYsEkatgyJQewDgUk3mzErzNVmKw45V7EIsnBZIMRHFV0W2qge/9Y\nRc4yTsjbf6+h+47sU+2KIVjMe55vW71VSv7JzVOJEvmfZxNdYSlxYAf7hhNT4rOf\nuOuUMDZKMfkoMEBtp1pulgpL7/hE+ZbNxDaSKxbKquvgeMzEkrmPmB8YQtdVpupN\nqQTmC+mdRPMxqBRtxLjPH07Tbu/E8JnmI2uRxgYvnFQtTjYaEHDFOS+kEVO6SOID\nU/QfGw7DbvYvhBmxbHG2YHEst9nyqkhUNbABSpGlAz71njpFvcE9e+jCRZAoYrOX\nD49m\n-----END CERTIFICATE-----\n\r\n"};
 
     // OR pretend it's sealed...
-    //vars.is_sealed = true;
+    vars.is_sealed = true;
 
     // OR pretend it's brand new
-    vars.is_fresh = true;
+    //vars.is_fresh = true;
 
     render_state(vars);
 }
