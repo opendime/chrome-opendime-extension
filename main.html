@@ -24,6 +24,18 @@
     </div>
   </div>
 
+  <div class="ui basic modal" id="nada-modal">
+    <div class="header">Insert Opendime</div>
+    <div class="content">
+      <p>
+        Please insert the Opendime into any USB socket.
+      </p>
+    </div>
+    <div class="actions">
+      <button class="ui approve button">Learn More</button>
+    </div>
+  </div>
+
   <div class="ui basic modal" id="fresh-modal">
     <div class="header">Factory Fresh</div>
     <div class="content">
@@ -32,9 +44,23 @@
         hasn't yet picked a Bitcoin payment address.
       </p>
     </div>
-
     <div class="actions">
-      <button class="ui approve button">Pick One Now</button>
+      <button class="ui approve button">Pick One Now!</button>
+    </div>
+  </div>
+
+  <div class="ui basic modal" id="picking-modal">
+    <div class="header">Make Bitcoin Address</div>
+    <div class="content">
+      <p>
+        Picking lots of random numbers now.
+      </p>
+
+      <div class="ui progress success">
+        <div class="bar">
+          <div class="progress"></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -81,22 +107,44 @@
       <p>
         To learn the balance of this Opendime, you need to consult online with
         the blockchain. You can do that via any of these services. Be aware they
-        may track your IP address and link it to this address.
+        may track your IP address and link it to this payment address.
       </p>
 
-      <a class="ui button js-bce positive" href="https://opendime.com/balance/PUBKEY" rel="noreferrer">Opendime.com</a>
-        <br>
-
-      <div class="ui mini buttons">
-        <a class="ui button js-bce " href="https://blockchain.info/address/PUBKEY" rel="noreferrer">Blockchain.info</a>
-        <a class="ui button js-bce" href="https://www.blocktrail.com/BTC/address/PUBKEY" rel="noreferrer">Blocktrail</a>
-        <a class="ui button js-bce" href="https://btc.blockr.io/address/info/PUBKEY" rel="noreferrer">Blockr.io</a>
+      <div class="ui form">
+        <div class="two fields">
+          <div class="field">
+                <select class="dropdown">
+                    <option value="opendime">Opendime.com</option>
+                    <option value="dot-info">Blockchain.info</option>
+                    <option value="trail">Blocktrail</option>
+                    <option value="blockr">Blockr.io</option>
+                    <option value="local">LocalBitcoins</option>
+                    <option value="charts">BitInfoCharst</option>
+                    <option value="bip122">BIP122 Link</option>
+                </select>
+          </div>
+          <div class="field">
+              <button class="ui button"><i class="external link icon"></i> Go</button>
+          </div>
+        </div>
       </div>
 
-      <div class="ui mini buttons">
-        <a class="ui button js-bce" href="https://localbitcoinschain.com/address/PUBKEY" rel="noreferrer">LocalBitcoins</a>                         
-        <a class="ui button js-bce" href="https://bitinfocharts.com/bitcoin/address/PUBKEY" rel="noreferrer">BitInfoCharts</a>
-        <a class="ui button js-bce" href="blockchain:/address/PUBKEY" rel="noreferrer" title="Use BIP 122 link to open your favourite block explorer">BIP122 link</a>
+      <h4 class="ui dividing header">Verifications</h4>
+
+      <ul>
+        <li>Implements our USB protocol.
+        <li>Valid Bitcoin address.
+        <li>Valid factory certificate.
+        <li>Signed atesting message correctly.
+      </ul>
+
+      <div class="ui positive mini compact message">
+        <div class="content">
+          <div class="header">
+          <i class="check icon"></i>
+            Verified Authentic Opendime.
+          </div>
+        </div>
       </div>
 
 
