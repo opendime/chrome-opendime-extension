@@ -7,11 +7,7 @@ var permissionObj = {permissions: [{'usbDevices': [DEVICE_INFO] }]};
 
 var current_device;
 
-var transfer = {
-  direction: 'in',
-  endpoint: 1,
-  length: 6
-};
+var QR_code;
 
 /*
 
@@ -227,12 +223,13 @@ function reset_ui(show_empty)
     $('.js-stateful').text('');
     $('.js-unsealed-warn').hide();
     $('#picking-modal').modal('hide');
-    $('#fresh-modal').modal('hide');
+    //$('#fresh-modal').modal('hide');
+    $('#js-fresh-msg').hide()
+    $('#js-get-balance').hide()
 
     $('#nada-modal').modal(show_empty);
-    if(show_empty == 'show') {
-        show_qr('xxx -- xxx');
-    }
+
+    if(QR_code) QR_code.clear()
 }
 
 function render_state(vars)
@@ -240,14 +237,19 @@ function render_state(vars)
     reset_ui('hide');
 
     if(vars.is_fresh) {
+        $('#js-fresh-msg').show()
+/*
         $('#fresh-modal').modal({
             closable: false,
             onApprove: pick_keys,
             duration: 100,
         }).modal('show');
+*/
 
         return;
     }
+
+    $('#js-get-balance').show()
 
     if(!vars.is_sealed) {
         $('.js-unsealed-warn').show();
@@ -258,28 +260,120 @@ function render_state(vars)
     show_qr(vars.ad);
 }
 
+// take from pvutils
+function stringToArrayBuffer(str)
+{
+	const stringLength = str.length;
+	const resultBuffer = new ArrayBuffer(stringLength);
+	const resultView = new Uint8Array(resultBuffer);
+	
+	for(let i = 0; i < stringLength; i++)
+		resultView[i] = str.charCodeAt(i);
+	
+	return resultBuffer;
+}
+
 function start_verify(vars)
 {
+    var el = $('#js-verify-list');
+
+    el.empty();
+    $("<li>Implements our USB protocol.</li>").appendTo(el);
+
+    $('.js-verified-good').hide()
+    $('.js-verified-bad').hide()
+
+    FAIL = function(msg) {
+        console.log("FAILED verification: " + msg);
+        $('.js-verified-good').hide();
+        $('.js-verified-bad').show();
+    }
+
     if(!vars.is_fresh) {
-        // can always check the bitcoin signatures
+        // can check the bitcoin signatures
     }
     
     if(!vars.is_v1) {
         // do the new hard stuff
+
+        var unit_der = atob(vars.cert.replace(/-----(BEGIN|END) CERTIFICATE-----/g,''));
+
+        var asn1 = org.pkijs.fromBER(stringToArrayBuffer(unit_der));
+        var cert = new org.pkijs.simpl.CERT({ schema: asn1.result });
+
+        $('<li>Valid unit certificate.</li>').appendTo(el);
+
+        var sn = cert.subject.types_and_values[0].value.value_block.value;
+
+        if(sn == vars.sn + '+' + vars.ae) {
+            $('<li>Unit certificate and serial number matches.</li>').appendTo(el);
+        } else {
+            FAIL("serial # mismatch");
+        }
+
+        /* looks like chrome isn't ready yet for this?
+        cert.getPublicKey().then(function(result) {
+            console.log("pk: ", result);
+        }, function(error) {
+            console.log("error: ", error);
+        });
+        */
+
+        var asn1 = org.pkijs.fromBER(stringToArrayBuffer(factory_root_chain));
+        var factory = new org.pkijs.simpl.CERT({ schema: asn1.result });
+
+        var asn1 = org.pkijs.fromBER(stringToArrayBuffer(batch_cert));
+        var batch = new org.pkijs.simpl.CERT({ schema: asn1.result });
+
+        var chain = new Array();
+        chain.push(batch);
+        chain.push(factory);
+
+        var untrusted = new Array();
+        untrusted.push(cert);
+
+        var cert_chain_simpl = new org.pkijs.simpl.CERT_CHAIN({
+                trusted_certs: chain,
+                certs: untrusted,
+            });
+
+        //console.log("cert", cert);
+        cert_chain_simpl.verify().then(
+            function(result)
+            {
+                if(result.result === true) {
+                    $('<li>Unit certificate is properly signed by factory.</li>').appendTo(el);
+                } else {
+                    FAIL("Unit certificate does not check out: signature");
+                }
+            },
+            function(error)
+            {
+                FAIL("Unit certificate does not check out: " + error);
+            }
+        );
     }
+
+    setTimeout(function() {
+        if(!$('.js-verified-bad').is(":visible")) {
+            $('.js-verified-good').show()
+        }
+    }, 250);
 }
 
 function show_qr(data)
 {
-    var el = $('#main-qr');
-
-    var qrcode = new QRCode('main-qr', {
-        text: data,
-        // width: 300, height: 300,
-        colorDark : "#000000",
-        colorLight : "#ffffff",
-        correctLevel : QRCode.CorrectLevel.H
-    });
+    if(QR_code) {
+        QR_code.makeCode(data);
+    } else {
+        QR_code = new QRCode('main-qr', {
+            text: data,
+            width: 256, height: 256,
+            colorDark : "#000000",
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.H
+        });
+    }
 };
 
 function have_permission(result)
@@ -425,13 +519,14 @@ if(chrome.permissions) {
 {"sn":"4QR6SUSUJVGVCIBAEBDTIHQK74","is_fresh":false,"is_sealed":false,"is_v1":false,"ad":"1E8t4b3bSoVPGPW84D2i8pJs3ckK6fuRaH","ae":"c5adbafe8b3d","pk":"5KZ13kVzh9G8m7B6cS8QxQQ6E37wRwTgHAcoKEAPRe7vs1rxuXH","cert":"-----BEGIN CERTIFICATE-----\nMIICbzCCAVegAwIBAgIIPE25afsphhMwDQYJKoZIhvcNAQELBQAwFjEUMBIGA1UE\nAwwLQmF0Y2ggIzEgQ0EwHhcNMTcwMzAxMDAwMDAwWhcNMzcwMTAxMDAwMDAwWjBF\nMTAwLgYDVQQFEyc0UVI2U1VTVUpWR1ZDSUJBRUJEVElIUUs3NCtjNWFkYmFmZThi\nM2QxETAPBgNVBAMMCE9wZW5kaW1lMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE\nAHhk+Wudf27ye/x0Xi+6Kx4UB2ib8iz98metsYN3vlwWydtBEeR8HDkAn5xOVXmT\nTWQVpkg2kmrnAS4sbYxWx6NdMFswHwYDVR0jBBgwFoAUnYVWYkYMVgGc59hdR/k0\nTaG3yJAwCQYDVR0TBAIwADAdBgNVHQ4EFgQU6Bezb+VFDNezZNVSPjNijSYaLeQw\nDgYDVR0PAQH/BAQDAgeAMA0GCSqGSIb3DQEBCwUAA4IBAQCtvuw8geubwGhR0GK2\noq9Tfz65vLgIYsEkatgyJQewDgUk3mzErzNVmKw45V7EIsnBZIMRHFV0W2qge/9Y\nRc4yTsjbf6+h+47sU+2KIVjMe55vW71VSv7JzVOJEvmfZxNdYSlxYAf7hhNT4rOf\nuOuUMDZKMfkoMEBtp1pulgpL7/hE+ZbNxDaSKxbKquvgeMzEkrmPmB8YQtdVpupN\nqQTmC+mdRPMxqBRtxLjPH07Tbu/E8JnmI2uRxgYvnFQtTjYaEHDFOS+kEVO6SOID\nU/QfGw7DbvYvhBmxbHG2YHEst9nyqkhUNbABSpGlAz71njpFvcE9e+jCRZAoYrOX\nD49m\n-----END CERTIFICATE-----\n\r\n"};
 
     // OR pretend it's sealed...
-    vars.is_sealed = true;
+    //vars.is_sealed = true;
 
     // OR pretend it's brand new
-    //vars.is_fresh = true;
+    vars.is_fresh = true;
 
     render_state(vars);
 }
 
 $('select.dropdown').dropdown();
+$('button.js-start-pick').click(pick_keys);
 

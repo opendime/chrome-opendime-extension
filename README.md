@@ -23,6 +23,8 @@ for years anyway...
 - <https://developer.chrome.com/apps/api_index> useful index page
 - <http://semantic-ui.com/examples/theming.html> Sematic UI CSS cheatsheet
 - <https://davidshimjs.github.io/qrcodejs/> for QR code rendering
+- <http://pkijs.org/> Certificate stuff
+- <https://github.com/indutny/elliptic> EC curve stuff
 
 # Useful Chrome internal links
 
@@ -39,7 +41,8 @@ for years anyway...
 open main.html
 ```
 
-- note app window is currently coded to be 800x600px but we can change that
+- app window is currently coded to be 800x600px but we can change that, you should
+  work in a similarly-sized window.
 
 # Debug As Extension.
 

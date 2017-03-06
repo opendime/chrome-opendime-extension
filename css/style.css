@@ -3,9 +3,9 @@ body {
 }
 
 .qrcode {
+    min-width: 256px;
+    min-height: 256px;
 /*
-    width: 300px;
-    height: 300px;
     border: 1px solid #ddd;
 */
 }
@@ -15,3 +15,6 @@ code.btc-addr {
     text-align: center;
 }
 
+code.inline {
+    font-size: 70%;
+}
