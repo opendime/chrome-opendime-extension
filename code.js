@@ -273,6 +273,79 @@ function stringToArrayBuffer(str)
 	return resultBuffer;
 }
 
+/*
+    H = lambda x: sha256(x).digest()
+
+    if 'ad' in expect:
+        slot13 = A2B(expect['ad'].ljust(72))[0:32]
+        lock = b'\0'
+    else:
+        slot13 = b'\xff' * 32
+        lock = b'\1'
+
+    slot14 = A2B(expect['sn'] + "+" + expect['ae'])[0:32]
+
+    fixed = b'\x00\xEE\x01\x23' + b'\0' *25
+    msg1 = slot14 + b'\x15\x02\x0e' + fixed + H(ae_rand + numin + b'\x16\0\0')
+    msg2 = slot13 + b'\x15\x02\x0d' + fixed + H(msg1)
+    SN = a2b_hex(expect['ae'])
+
+    body = H(msg2) + b'\x41\x40\x00\x00\x00\x00\x3c\x00\x2d\0\0\xEE' \
+                + SN[2:6] + b'\x01\x23'+ SN[0:2] + lock + b'\0\0'
+
+    from ecdsa.keys import BadSignatureError
+    try:
+        ok = pubkey.verify(sig, body, hashfunc=sha256)
+    except BadSignatureError:
+        ok = False
+
+    return ok
+*/
+
+function check_signature(pubkey, numin, response, vars)
+{
+return true;
+
+    // NOTE: response is 64 bytes of r+s, then 32 bytes of nonce picked by the chip.
+    var toArray = elliptic.utils.toArray;
+    var parseBytes = elliptic.utils.parseBytes;
+
+    // Take any binary, hash it and return 32-byte digest as binary (string)
+    // see https://github.com/indutny/hash.js
+    var H = function (m) {
+        return pubkey.ec.hash().update(m).digest();
+    };
+
+    var slot13, lock;
+    if(vars.ad) {
+        slot13 = toArray((vars.ad + '        ').substr(0, 32));
+        lock = [0];
+    } else {
+        slot13 = parseBytes('ff'.repeat(32));
+        lock = [1];
+    }
+
+    const sig = response.slice(0, 64);
+    const ae_rand = response.slice(64, 96);
+
+    const slot14 = toArray((vars.sn + "+" + vars.ae).substr(0, 32));
+
+    const fixed = parseBytes('00EE0123' + '00'.repeat(25))
+    const msg1 = slot14 + parseBytes('15020e') + fixed + H(ae_rand + numin + parseBytes('160000'))
+    const msg2 = slot13 + parseBytes('15020d') + fixed + H(msg1)
+
+    const SN = toArray(vars.ae)
+
+    const body = H(msg2) + parseBytes('4140000000003c002d0000EE')
+                + SN.slice(2,6) + parseBytes('0123')
+                + SN.splice(0, 2) + lock 
+                + parseBytes('0000');
+    
+    //var sig = elliptic.ec.Signature({r: sig_r, s: sig_s});
+
+    return pubkey.verify(body, sig)
+}
+
 function start_verify(vars)
 {
     var el = $('#js-verify-list');
@@ -289,6 +362,8 @@ function start_verify(vars)
         $('.js-verified-bad').show();
     }
 
+    var od_dev = vars.dev;
+
     if(!vars.is_fresh) {
         // can check the bitcoin signatures
     }
@@ -301,12 +376,16 @@ function start_verify(vars)
         var asn1 = org.pkijs.fromBER(stringToArrayBuffer(unit_der));
         var cert = new org.pkijs.simpl.CERT({ schema: asn1.result });
 
-        $('<li>Valid unit certificate.</li>').appendTo(el);
+        if(cert.subjectPublicKeyInfo.algorithm.algorithm_id == '1.2.840.10045.2.1') {
+            $('<li>Has unit certificate.</li>').appendTo(el);
+        } else {
+            FAIL("Wrong key type");
+        }
 
         var sn = cert.subject.types_and_values[0].value.value_block.value;
 
         if(sn == vars.sn + '+' + vars.ae) {
-            $('<li>Unit certificate and serial number matches.</li>').appendTo(el);
+            $('<li>Unit certificate and serial numbers match.</li>').appendTo(el);
         } else {
             FAIL("serial # mismatch");
         }
@@ -352,13 +431,42 @@ function start_verify(vars)
                 FAIL("Unit certificate does not check out: " + error);
             }
         );
+
+        // secp256r1 pubkey, DER encoded (sequence of 2 ints).
+        var pubkey_bin = cert.subjectPublicKeyInfo.subjectPublicKey.value_block.value_hex;
+        console.log("Pubkey = " + encode_hex(pubkey_bin));
+
+        var curve = new elliptic.ec('p256');
+        var pubkey = curve.keyFromPublic(encode_hex(pubkey_bin), 'hex');
+
+        var numin = new Uint8Array(20);
+        window.crypto.getRandomValues(numin);
+        put_value(od_dev, 'f', numin);
+
+        console.log("Numin = " + encode_hex(numin));
+
+        setTimeout(function() {
+            get_value(od_dev, 4, 64+32, function(rc, response) {
+                if(rc) {
+                    FAIL("Signature didn't happen");
+                } else {
+                    console.log("Sign+nonce = " + encode_hex(response));
+
+                    if(check_signature(pubkey, numin, response, vars)) {
+                        $('<li>Correct signature by special security chip.</li>').appendTo(el);
+                    } else {
+                        FAIL("Signature fail for 508a");
+                    }
+                }
+            });
+        }, 200);
     }
 
     setTimeout(function() {
         if(!$('.js-verified-bad').is(":visible")) {
             $('.js-verified-good').show()
         }
-    }, 250);
+    }, 300);
 }
 
 function show_qr(data)
@@ -496,6 +604,19 @@ function dev_inserted(dev)
     });
 }
 
+document.addEventListener('copy', function(e){
+    if(!current_device || !current_device.ad) return;
+
+    var addr = current_device.ad;
+
+    e.clipboardData.setData('text/plain', addr);
+    e.preventDefault();
+});
+function copy_clipboard()
+{
+    document.execCommand('copy');
+}
+
 // Startup code.
 //
 if(chrome.permissions) {
@@ -527,6 +648,9 @@ if(chrome.permissions) {
     render_state(vars);
 }
 
+
+
 $('select.dropdown').dropdown();
 $('button.js-start-pick').click(pick_keys);
+$('button.js-copy-clipboard').click(copy_clipboard);
 

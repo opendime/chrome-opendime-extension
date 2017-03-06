@@ -17,6 +17,7 @@
   <script src="libs/pkijs/cms_simpl.js"></script>
   <script src="libs/pkijs/ocsp_tsp_schema.js"></script>
   <script src="libs/pkijs/ocsp_tsp_simpl.js"></script>
+  <script src="libs/elliptic.min.js"></script>
   <script src="chain.js"></script>
 
 </head><body>
@@ -79,7 +80,7 @@
           <code class="js-stateful js-addr btc-addr"></code>
         </div>
         <div class="extra content">
-          <button class="ui labeled icon button small">
+          <button class="ui labeled icon button small js-copy-clipboard">
               <i class="clipboard icon"></i> Copy to clipboard
           </button>
         </div>
@@ -88,7 +89,7 @@
     </div>
     <div class="ten wide column">
 
-      <div class="ui icon negative message js-unsealed-warn">
+      <div class="ui icon negative message js-unsealed-warn" style="display:none">
         <i class="warning sign icon"></i>
         <div class="content">
           <div class="header">
@@ -100,7 +101,7 @@
         </div>
       </div>
 
-      <div class="ui icon message" id="js-fresh-msg">
+      <div class="ui icon message" id="js-fresh-msg" style="display:none">
         <i class="birthday icon"></i>
         <div class="content">
           <div class="header">Factory Fresh</div>
@@ -149,7 +150,7 @@
         <!-- dynamic -->
       </ul>
 
-      <div class="ui positive mini compact message js-verified-good">
+      <div class="ui positive mini compact message js-verified-good" style="display:none">
         <div class="content">
           <div class="header">
           <i class="check icon"></i>
@@ -157,7 +158,7 @@
           </div>
         </div>
       </div>
-      <div class="ui negative mini compact message js-verified-bad">
+      <div class="ui negative mini compact message js-verified-bad" style="display:none">
         <div class="content">
           <div class="header">
           <i class="cancel icon"></i>
