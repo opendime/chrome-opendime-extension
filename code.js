@@ -24,111 +24,84 @@ def set_debug_value(dev, code, expect_works=True, data=None):
 */
 function get_value(od_dev, index, max_resp, callback)
 {
-  var ti = {
-    "requestType": "vendor",
-    "recipient": "device",
-    "direction": "in",
-    "request": 0,
-    "value": index,
-    "index": 0,
-    "length": max_resp,
-    "data": new ArrayBuffer(max_resp)
-  };
+    var ti = {
+        "requestType": "vendor",
+        "recipient": "device",
+        "direction": "in",
+        "request": 0,
+        "value": index,
+        "index": 0,
+        "length": max_resp,
+        "data": new ArrayBuffer(max_resp)
+    };
 
-    console.log("get_value: ", index);
-  chrome.usb.controlTransfer(od_dev, ti, function(usbEvent) {
-/* not really an error if we expect it and so on.
-      if (chrome.runtime.lastError) {
-        console.error("sendCompleted Error:", chrome.runtime.lastError);
-      }
-*/
-      err = chrome.runtime.lastError;
+    //console.log("get_value: ", index);
+    chrome.usb.controlTransfer(od_dev, ti, function(usbEvent) {
+        err = chrome.runtime.lastError;
 
-      if(usbEvent) {
-/*
-        if(usbEvent.resultCode !== 0) {
-          console.error("Error writing to device", usbEvent.resultCode);
+        if(usbEvent) {
+            callback(usbEvent.resultCode, usbEvent.data);
+        } else {
+            callback(err);
         }
-        if (usbEvent.data) {
-        }
-*/
-        callback(usbEvent.resultCode, usbEvent.data);
-      } else {
-        callback(err);
-      }
-  });
+    });
 }
 
 function put_value(od_dev, cmd_code, data, callback)
 {
-  var ti = {
-    "requestType": "vendor",
-    "recipient": "device",
-    "direction": "out",
-    "request": 0,
-    "value": cmd_code.charCodeAt(0),
-    "index": 0,
-    "data": data.buffer
-  };
+    var ti = {
+        "requestType": "vendor",
+        "recipient": "device",
+        "direction": "out",
+        "request": 0,
+        "value": cmd_code.charCodeAt(0),
+        "index": 0,
+        "data": data.buffer
+    };
 
-  console.log("put_value: ", cmd_code);
-  chrome.usb.controlTransfer(od_dev, ti, function(usbEvent) {
-      err = chrome.runtime.lastError;
+    //console.log("put_value: ", cmd_code);
+    chrome.usb.controlTransfer(od_dev, ti, function(usbEvent) {
+        err = chrome.runtime.lastError;
 
-      if(!callback) return;
+        if(!callback) return;
 
-      if(usbEvent) {
-        callback(usbEvent.resultCode, usbEvent.data);
-      } else {
-        callback(err);
-      }
-  });
+        if(usbEvent) {
+            callback(usbEvent.resultCode, usbEvent.data);
+        } else {
+            callback(err);
+        }
+    });
 }
 
 function put_n_get_sig(od_dev, cmd_code, nonce, resp_len)
 {
-    // do 'm' or 'f' commands and wait for response; returns a promise.
+    // do 'm' or 'f' command and wait 100ms for response; returns a promise.
+    //
     return new Promise(function(resolve, reject) {
-
-        const start = new Date();
  
         console.log(cmd_code + ": msg/nonce = " + encode_hex(nonce));
 
-        // send the cvalues to be signed/nonce/etc
+        // send the value to be signed aka. nonce
+
         put_value(od_dev, cmd_code, nonce, function(rc, resp) {
             if(rc) {
                 return reject("put fail: " + rc);
             }
+
             // empty response expected
-            console.log("step1: ", (new Date())-start);
 
-/*
-            // bugfix: this fixes timing issues... 
-            get_value(od_dev, 4, resp_len, console.log);
+            // takes minimum 100ms for response, and we must
+            // poll for it... errors here are just stalling.
 
-            // must wait before readback
-            setTimeout(function() {
-                console.log("step2: ", (new Date())-start);
-                get_value(od_dev, 4, resp_len, function(rc, response) {
-                    console.log("done: ", (new Date())-start, ' rc', rc);
-                    if(rc) {
-                        reject("get fail: " + rc);
-                    } else {
-                        resolve(response);
-                    }
-                });
-            }, 200);
-*/
             var failures = 0;
             var handle = setInterval(function() {
-                //console.log("step2: ", (new Date())-start);
                 get_value(od_dev, 4, resp_len, function(rc, response) {
                     if(rc) {
-                        //console.log("tmp fail: ", (new Date())-start, ' rc', rc);
                         failures ++;
-                        if(failures > 100) {
+
+                        if(failures > 50) {
                             clearInterval(handle);
-                            reject("get fail: " + rc);
+                            reject("put_n_get_sig timeout: " + rc);
                         }
                     } else {
                         clearInterval(handle);
@@ -138,8 +111,6 @@ function put_n_get_sig(od_dev, cmd_code, nonce, resp_len)
             }, 50);
         });
     });
-
-
 }
 
 function decode_LE32(data)
@@ -447,8 +418,23 @@ function do_v2_checks(vars, el, FAIL)
     // pick our side's nonce
     var numin = new Uint8Array(20);
     window.crypto.getRandomValues(numin);
-    put_value(od_dev, 'f', numin);
 
+    var pp = put_n_get_sig(od_dev, 'f', numin, 64+32);
+    pp.then(function(response) {
+            console.log("Response(Sig+nonce) = " + encode_hex(response));
+
+            if(check_signature(pubkey, numin, response, vars)) {
+                $('<li>Correct signature by anti-counterfeiting chip.</li>').appendTo(el);
+            } else {
+                FAIL("Signature fail for 508a");
+            }
+    }).catch(function() {
+        FAIL("Signature didn't happen");
+    });
+    
+    return pp;
+/*
+    put_value(od_dev, 'f', numin);
     console.log("Numin = " + encode_hex(numin));
 
     // device needs 200ms signing time
@@ -467,6 +453,7 @@ function do_v2_checks(vars, el, FAIL)
             }
         });
     }, 200);
+*/
 }
 
 function check_btc_signature(address, msg, response)
@@ -475,7 +462,6 @@ function check_btc_signature(address, msg, response)
     const parseBytes = elliptic.utils.parseBytes;         // hex->bytes in array
 
     // address, signature, message, network
-    return BTC.bitcoin.message.verify(address, response, msg) 
 }
 
 
@@ -486,7 +472,7 @@ function do_btc_checks(vars, el, FAIL)
 
     if(vars.is_fresh || !vars.ad) {
         // just do nothing but in a promise, gag.
-        return Promise.resolved();
+        return Promise.resolve();
     }
 
     const od_dev = vars.dev;
@@ -495,36 +481,10 @@ function do_btc_checks(vars, el, FAIL)
     var nonce = new Uint8Array(32);
     window.crypto.getRandomValues(nonce);
 
-console.log("b4");
     var pp = put_n_get_sig(od_dev, 'm', nonce, 65);
-console.log("after-ish");
-
-/*
-    var pp = new Promise(function(resolve, reject) {
-
-        // give it to be signed.
-        put_value(od_dev, 'm', nonce);
-
-        console.log("Msg/Nonce = " + encode_hex(nonce));
-
-        // device needs 200ms signing time
-
-        setTimeout(function() {
-            get_value(od_dev, 4, 65, function(rc, response) {
-                if(rc) {
-                    // takes time, and it fails until ready
-                    reject("usb fail:" + rc);
-                } else {
-                    console.log("Signature response = " + encode_hex(response));
-                    resolve(nonce, response)
-                }
-            });
-        }, 2000);
-    });
-*/
 
     return pp.then(function(sig) {
-        if(check_btc_signature(vars.ad, nonce, sig)) {
+        if(BTC.bitcoin.message.verify(vars.ad, sig, nonce)) {
             $('<li>Bitcoin address verified with signed message.</li>').appendTo(el);
         } else {
             FAIL("Bad signature for bitcoin!");
@@ -551,20 +511,20 @@ function start_verify(vars)
     }
 
     // can usually check the bitcoin signatures
-    step1 = do_btc_checks(vars, el, FAIL);
+    var pp = do_btc_checks(vars, el, FAIL);
 
     if(!vars.is_v1) {
         // do the new hard stuff
-        step1.then(function() {
+        pp = pp.then(function() {
             do_v2_checks(vars, el, FAIL);
         });
     }
 
-    setTimeout(function() {
+    pp.then(function() {
         if(!$('.js-verified-bad').is(":visible")) {
             $('.js-verified-good').show()
         }
-    }, 300);
+    });
 }
 
 function show_qr(data)
