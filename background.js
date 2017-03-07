@@ -2,7 +2,7 @@ function open(dev) {
   chrome.app.window.create('main.html', {
     innerBounds: {
       width: 800,
-      height: 768
+      height: 868
     },
     id: "OpendimeApp-main" });
 }
