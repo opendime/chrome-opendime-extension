@@ -35,6 +35,7 @@ function get_value(od_dev, index, max_resp, callback)
     "data": new ArrayBuffer(max_resp)
   };
 
+    console.log("get_value: ", index);
   chrome.usb.controlTransfer(od_dev, ti, function(usbEvent) {
 /* not really an error if we expect it and so on.
       if (chrome.runtime.lastError) {
@@ -70,6 +71,7 @@ function put_value(od_dev, cmd_code, data, callback)
     "data": data.buffer
   };
 
+  console.log("put_value: ", cmd_code);
   chrome.usb.controlTransfer(od_dev, ti, function(usbEvent) {
       err = chrome.runtime.lastError;
 
@@ -83,6 +85,62 @@ function put_value(od_dev, cmd_code, data, callback)
   });
 }
 
+function put_n_get_sig(od_dev, cmd_code, nonce, resp_len)
+{
+    // do 'm' or 'f' commands and wait for response; returns a promise.
+    return new Promise(function(resolve, reject) {
+
+        const start = new Date();
+ 
+        console.log(cmd_code + ": msg/nonce = " + encode_hex(nonce));
+
+        // send the cvalues to be signed/nonce/etc
+        put_value(od_dev, cmd_code, nonce, function(rc, resp) {
+            if(rc) {
+                return reject("put fail: " + rc);
+            }
+            // empty response expected
+            console.log("step1: ", (new Date())-start);
+
+/*
+            // bugfix: this fixes timing issues... 
+            get_value(od_dev, 4, resp_len, console.log);
+
+            // must wait before readback
+            setTimeout(function() {
+                console.log("step2: ", (new Date())-start);
+                get_value(od_dev, 4, resp_len, function(rc, response) {
+                    console.log("done: ", (new Date())-start, ' rc', rc);
+                    if(rc) {
+                        reject("get fail: " + rc);
+                    } else {
+                        resolve(response);
+                    }
+                });
+            }, 200);
+*/
+            var failures = 0;
+            var handle = setInterval(function() {
+                //console.log("step2: ", (new Date())-start);
+                get_value(od_dev, 4, resp_len, function(rc, response) {
+                    if(rc) {
+                        //console.log("tmp fail: ", (new Date())-start, ' rc', rc);
+                        failures ++;
+                        if(failures > 100) {
+                            clearInterval(handle);
+                            reject("get fail: " + rc);
+                        }
+                    } else {
+                        clearInterval(handle);
+                        resolve(response);
+                    }
+                });
+            }, 50);
+        });
+    });
+
+
+}
 
 function decode_LE32(data)
 {
@@ -428,9 +486,7 @@ function do_btc_checks(vars, el, FAIL)
 
     if(vars.is_fresh || !vars.ad) {
         // just do nothing but in a promise, gag.
-        return new Promise(function(res, rej) {
-                res();
-        });
+        return Promise.resolved();
     }
 
     const od_dev = vars.dev;
@@ -438,38 +494,44 @@ function do_btc_checks(vars, el, FAIL)
     // pick a random nonce to be signed
     var nonce = new Uint8Array(32);
     window.crypto.getRandomValues(nonce);
-    put_value(od_dev, 'm', nonce);
 
-    console.log("Msg/Nonce = " + encode_hex(nonce));
+console.log("b4");
+    var pp = put_n_get_sig(od_dev, 'm', nonce, 65);
+console.log("after-ish");
 
-    // device needs 200ms signing time
-
+/*
     var pp = new Promise(function(resolve, reject) {
+
+        // give it to be signed.
+        put_value(od_dev, 'm', nonce);
+
+        console.log("Msg/Nonce = " + encode_hex(nonce));
+
+        // device needs 200ms signing time
 
         setTimeout(function() {
             get_value(od_dev, 4, 65, function(rc, response) {
                 if(rc) {
                     // takes time, and it fails until ready
-                    reject("usb fail");
+                    reject("usb fail:" + rc);
                 } else {
                     console.log("Signature response = " + encode_hex(response));
-                    resolve(response)
+                    resolve(nonce, response)
                 }
             });
-        }, 200);
+        }, 2000);
     });
+*/
 
-    pp.then(function(sig) {
+    return pp.then(function(sig) {
         if(check_btc_signature(vars.ad, nonce, sig)) {
             $('<li>Bitcoin address verified with signed message.</li>').appendTo(el);
         } else {
-            FAIL("Signature fail for bitcoin");
+            FAIL("Bad signature for bitcoin!");
         }
-    }, function(err) {
-        FAIL("Signature never finished/failed");
+    }).catch(function(err) {
+        FAIL("Bitcoin signature never finished/failed");
     });
-
-    return pp;
 }
 
 function start_verify(vars)
