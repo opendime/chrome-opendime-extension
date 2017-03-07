@@ -368,8 +368,6 @@ function do_v2_checks(vars, el, FAIL)
         return FAIL("Wrong key type");
     }
 
-return FAIL("testing");
-
     // read subject name's serial number
     var sn = cert.subject.types_and_values[0].value.value_block.value;
 
