@@ -661,3 +661,12 @@ $('button.js-copy-pk-clipboard').click(copy_pk_clipboard);
 $('.js-version').text(chrome.runtime.getManifest().version);
 
 $('.js-explore-btn').click(go_explore)
+
+/* TODO:
+
+- make topbar link work
+- leftside pin line missing
+- spinner + checking not perfect
+
+
+*/
