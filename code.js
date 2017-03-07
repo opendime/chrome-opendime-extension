@@ -638,7 +638,9 @@ if(chrome.permissions) {
 
 function reverify_btn()
 {
-    
+    if(current_device) {
+        start_verify(current_device);
+    }
 }
 
 
