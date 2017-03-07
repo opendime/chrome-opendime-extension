@@ -636,6 +636,11 @@ if(chrome.permissions) {
     render_state(vars);
 }
 
+function reverify_btn()
+{
+    
+}
+
 
 function go_explore()
 {
@@ -648,6 +653,7 @@ function go_explore()
 
 $('select.dropdown').dropdown();
 $('button.js-start-pick').click(pick_keys);
+$('.js-reverify-btn').click(reverify_btn);
 $('button.js-copy-clipboard').click(copy_clipboard);
 $('button.js-copy-pk-clipboard').click(copy_pk_clipboard);
 $('.js-version').text(chrome.runtime.getManifest().version);
