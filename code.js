@@ -165,7 +165,7 @@ function probe_opendime(od_dev, serial_number)
     setTimeout(function() {
         current_device = vars;
 
-        console.log("vars", vars);
+        //console.log("vars", vars);
         render_state(vars);
         start_verify(vars);
     }, 200);
@@ -273,42 +273,11 @@ function stringToArrayBuffer(str)
 	return resultBuffer;
 }
 
-/*
-    H = lambda x: sha256(x).digest()
-
-    if 'ad' in expect:
-        slot13 = A2B(expect['ad'].ljust(72))[0:32]
-        lock = b'\0'
-    else:
-        slot13 = b'\xff' * 32
-        lock = b'\1'
-
-    slot14 = A2B(expect['sn'] + "+" + expect['ae'])[0:32]
-
-    fixed = b'\x00\xEE\x01\x23' + b'\0' *25
-    msg1 = slot14 + b'\x15\x02\x0e' + fixed + H(ae_rand + numin + b'\x16\0\0')
-    msg2 = slot13 + b'\x15\x02\x0d' + fixed + H(msg1)
-    SN = a2b_hex(expect['ae'])
-
-    body = H(msg2) + b'\x41\x40\x00\x00\x00\x00\x3c\x00\x2d\0\0\xEE' \
-                + SN[2:6] + b'\x01\x23'+ SN[0:2] + lock + b'\0\0'
-
-    from ecdsa.keys import BadSignatureError
-    try:
-        ok = pubkey.verify(sig, body, hashfunc=sha256)
-    except BadSignatureError:
-        ok = False
-
-    return ok
-*/
-
 function check_signature(pubkey, numin, response, vars)
 {
-return true;
-
     // NOTE: response is 64 bytes of r+s, then 32 bytes of nonce picked by the chip.
-    var toArray = elliptic.utils.toArray;
-    var parseBytes = elliptic.utils.parseBytes;
+    var toArray = elliptic.utils.toArray;               // misc to array
+    var parseBytes = elliptic.utils.parseBytes;         // hex->bytes in array
 
     // Take any binary, hash it and return 32-byte digest as binary (string)
     // see https://github.com/indutny/hash.js
@@ -325,25 +294,32 @@ return true;
         lock = [1];
     }
 
-    const sig = response.slice(0, 64);
-    const ae_rand = response.slice(64, 96);
+    const ae_rand = toArray(new Uint8Array(response.slice(64, 96)));
+
+    numin = toArray(numin);
 
     const slot14 = toArray((vars.sn + "+" + vars.ae).substr(0, 32));
 
-    const fixed = parseBytes('00EE0123' + '00'.repeat(25))
-    const msg1 = slot14 + parseBytes('15020e') + fixed + H(ae_rand + numin + parseBytes('160000'))
-    const msg2 = slot13 + parseBytes('15020d') + fixed + H(msg1)
+    const fixed = parseBytes('00EE0123' + '00'.repeat(25));
+    const msg1 = slot14.concat(parseBytes('15020e'), fixed, 
+                    H(ae_rand.concat(numin, parseBytes('160000'))));
+    const msg2 = slot13.concat(parseBytes('15020d'), fixed, H(msg1));
 
-    const SN = toArray(vars.ae)
+    const SN = toArray(vars.ae, 'hex');
 
-    const body = H(msg2) + parseBytes('4140000000003c002d0000EE')
-                + SN.slice(2,6) + parseBytes('0123')
-                + SN.splice(0, 2) + lock 
-                + parseBytes('0000');
+    const body = H(msg2).concat(parseBytes('4140000000003c002d0000EE'),
+                SN.slice(2,6), parseBytes('0123'),
+                SN.splice(0, 2), lock,
+                parseBytes('0000'));
+
+    const sig_r = new Uint8Array(response.slice(0, 32));
+    const sig_s = new Uint8Array(response.slice(32, 64));
     
-    //var sig = elliptic.ec.Signature({r: sig_r, s: sig_s});
+    const sig = {r: sig_r, s: sig_s};
 
-    return pubkey.verify(body, sig)
+    const ok = pubkey.verify(H(body), sig)
+
+    return ok;
 }
 
 function start_verify(vars)
@@ -376,28 +352,23 @@ function start_verify(vars)
         var asn1 = org.pkijs.fromBER(stringToArrayBuffer(unit_der));
         var cert = new org.pkijs.simpl.CERT({ schema: asn1.result });
 
+        // Simple syntax-only check: expect p256 curve pubkey in the cert.
         if(cert.subjectPublicKeyInfo.algorithm.algorithm_id == '1.2.840.10045.2.1') {
             $('<li>Has unit certificate.</li>').appendTo(el);
         } else {
             FAIL("Wrong key type");
         }
 
+        // read subject name's serial number
         var sn = cert.subject.types_and_values[0].value.value_block.value;
 
         if(sn == vars.sn + '+' + vars.ae) {
-            $('<li>Unit certificate and serial numbers match.</li>').appendTo(el);
+            $('<li>Unit certificate and actual serial numbers match.</li>').appendTo(el);
         } else {
             FAIL("serial # mismatch");
         }
 
-        /* looks like chrome isn't ready yet for this?
-        cert.getPublicKey().then(function(result) {
-            console.log("pk: ", result);
-        }, function(error) {
-            console.log("error: ", error);
-        });
-        */
-
+        // verify certificate is signed properly
         var asn1 = org.pkijs.fromBER(stringToArrayBuffer(factory_root_chain));
         var factory = new org.pkijs.simpl.CERT({ schema: asn1.result });
 
@@ -416,7 +387,6 @@ function start_verify(vars)
                 certs: untrusted,
             });
 
-        //console.log("cert", cert);
         cert_chain_simpl.verify().then(
             function(result)
             {
@@ -432,28 +402,30 @@ function start_verify(vars)
             }
         );
 
-        // secp256r1 pubkey, DER encoded (sequence of 2 ints).
+        // secp256r1 pubkey, DER encoded (sequence of 2 ints: (x, y) = point).
         var pubkey_bin = cert.subjectPublicKeyInfo.subjectPublicKey.value_block.value_hex;
         console.log("Pubkey = " + encode_hex(pubkey_bin));
 
         var curve = new elliptic.ec('p256');
         var pubkey = curve.keyFromPublic(encode_hex(pubkey_bin), 'hex');
 
+        // pick our side's nonce
         var numin = new Uint8Array(20);
         window.crypto.getRandomValues(numin);
         put_value(od_dev, 'f', numin);
 
         console.log("Numin = " + encode_hex(numin));
 
+        // device needs 200ms signing time
         setTimeout(function() {
             get_value(od_dev, 4, 64+32, function(rc, response) {
                 if(rc) {
                     FAIL("Signature didn't happen");
                 } else {
-                    console.log("Sign+nonce = " + encode_hex(response));
+                    console.log("Response(Sig+nonce) = " + encode_hex(response));
 
                     if(check_signature(pubkey, numin, response, vars)) {
-                        $('<li>Correct signature by special security chip.</li>').appendTo(el);
+                        $('<li>Correct signature by anti-counterfeiting chip.</li>').appendTo(el);
                     } else {
                         FAIL("Signature fail for 508a");
                     }
@@ -521,69 +493,6 @@ function ask_for_permission()
 }
 
 
-/* JUNK
-
-function setLEDBrightness(brightness) {
-  if ((brightness >= 0) && (brightness <= 255)) {
-    var info = {
-      "direction": "out",
-      "endpoint": 2,
-      "data": new Uint8Array([brightness]).buffer
-    };
-    chrome.usb.interruptTransfer(od_dev, info, sendCompleted);
-  } else {
-    console.error("Invalid brightness setting (0-255)", brightness);
-  }
-}
-
-function enablePulse(val) {
-  if (val === true) {
-    sendCommand(1, 3, 1);
-  } else {
-    sendCommand(1, 3, 0);
-  }
-}
-
-function enablePulseDuringSleep(val) {
-  if (val === true) {
-    sendCommand(1, 2, 1);
-  } else {
-    sendCommand(1, 2, 0);
-  }
-}
-
-function sendCommand(request, val, idx) {
-  var ti = {
-    "requestType": "vendor",
-    "recipient": "interface",
-    "direction": "out",
-    "request": request,
-    "value": val,
-    "index": idx,
-    "data": new ArrayBuffer(0)
-  };
-  chrome.usb.controlTransfer(od_dev, ti, sendCompleted);
-}
-
-
-
-function sendCompleted(usbEvent) {
-  if (chrome.runtime.lastError) {
-    console.error("sendCompleted Error:", chrome.runtime.lastError);
-  }
-
-  if (usbEvent) {
-    if (usbEvent.data) {
-      var buf = new Uint8Array(usbEvent.data);
-      console.log("sendCompleted Buffer:", usbEvent.data.byteLength, buf2hex(buf));
-    }
-    if (usbEvent.resultCode !== 0) {
-      console.error("Error writing to device", usbEvent.resultCode);
-    }
-  }
-}
-*/
-
 function dev_removed(dev)
 {
     // gets a Device
@@ -637,7 +546,7 @@ if(chrome.permissions) {
     //$('#perms-modal').modal('show');
     //ask_for_permission();
     var vars = 
-{"sn":"4QR6SUSUJVGVCIBAEBDTIHQK74","is_fresh":false,"is_sealed":false,"is_v1":false,"ad":"1E8t4b3bSoVPGPW84D2i8pJs3ckK6fuRaH","ae":"c5adbafe8b3d","pk":"5KZ13kVzh9G8m7B6cS8QxQQ6E37wRwTgHAcoKEAPRe7vs1rxuXH","cert":"-----BEGIN CERTIFICATE-----\nMIICbzCCAVegAwIBAgIIPE25afsphhMwDQYJKoZIhvcNAQELBQAwFjEUMBIGA1UE\nAwwLQmF0Y2ggIzEgQ0EwHhcNMTcwMzAxMDAwMDAwWhcNMzcwMTAxMDAwMDAwWjBF\nMTAwLgYDVQQFEyc0UVI2U1VTVUpWR1ZDSUJBRUJEVElIUUs3NCtjNWFkYmFmZThi\nM2QxETAPBgNVBAMMCE9wZW5kaW1lMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE\nAHhk+Wudf27ye/x0Xi+6Kx4UB2ib8iz98metsYN3vlwWydtBEeR8HDkAn5xOVXmT\nTWQVpkg2kmrnAS4sbYxWx6NdMFswHwYDVR0jBBgwFoAUnYVWYkYMVgGc59hdR/k0\nTaG3yJAwCQYDVR0TBAIwADAdBgNVHQ4EFgQU6Bezb+VFDNezZNVSPjNijSYaLeQw\nDgYDVR0PAQH/BAQDAgeAMA0GCSqGSIb3DQEBCwUAA4IBAQCtvuw8geubwGhR0GK2\noq9Tfz65vLgIYsEkatgyJQewDgUk3mzErzNVmKw45V7EIsnBZIMRHFV0W2qge/9Y\nRc4yTsjbf6+h+47sU+2KIVjMe55vW71VSv7JzVOJEvmfZxNdYSlxYAf7hhNT4rOf\nuOuUMDZKMfkoMEBtp1pulgpL7/hE+ZbNxDaSKxbKquvgeMzEkrmPmB8YQtdVpupN\nqQTmC+mdRPMxqBRtxLjPH07Tbu/E8JnmI2uRxgYvnFQtTjYaEHDFOS+kEVO6SOID\nU/QfGw7DbvYvhBmxbHG2YHEst9nyqkhUNbABSpGlAz71njpFvcE9e+jCRZAoYrOX\nD49m\n-----END CERTIFICATE-----\n\r\n"};
+{"sn":"4QR6SUSUJVGVCIBAEBDTIHQK74","is_fresh":false,"is_sealed":false,"is_v1":false,"ad":"1E8t4b3bSoVPGPW84D2i8pJs3ckK6fuRaH","ae":"c5adbafe8b3d","pk":"5KZ13kVzh9G8m7B6cS8QxQQ6E37wRwTgHAcoKEAPRe7vs1rxuXH","cert":"-----BEGIN CERTIFICATE-----\nXXXXXX-----END CERTIFICATE-----\n\r\n"};
 
     // OR pretend it's sealed...
     vars.is_sealed = true;
