@@ -8,6 +8,7 @@ var permissionObj = {permissions: [{'usbDevices': [DEVICE_INFO] }]};
 var current_device;
 
 var QR_code;
+var CLIPBOARD = '';
 
 /*
 
@@ -202,8 +203,7 @@ function probe_opendime(od_dev, serial_number)
 
 function pick_keys()
 {
-    //const TARGET = 256*1024;
-    const TARGET = 248*1024;
+    const TARGET = 256*1024;
 
     console.log("Picking keys");
 
@@ -252,13 +252,19 @@ function reset_ui(show_empty)
     $('.js-stateful').text('');
     $('.js-unsealed-warn').hide();
     $('#picking-modal').modal('hide');
-    //$('#fresh-modal').modal('hide');
     $('#js-fresh-msg').hide()
     $('#js-get-balance').hide()
+    $('button.js-if-verified').addClass('disabled');
+    $('button.js-copy-clipboard').hide();
 
     $('#nada-modal').modal(show_empty);
 
-    if(QR_code) QR_code.clear()
+    if(QR_code) {
+        $('#main-qr').empty();
+        QR_code = false;
+    }
+
+    CLIPBOARD = '';
 }
 
 function render_state(vars)
@@ -267,22 +273,19 @@ function render_state(vars)
 
     if(vars.is_fresh) {
         $('#js-fresh-msg').show()
-/*
-        $('#fresh-modal').modal({
-            closable: false,
-            onApprove: pick_keys,
-            duration: 100,
-        }).modal('show');
-*/
 
         return;
     }
+
+    $('button.js-copy-clipboard').show();
 
     $('#js-get-balance').show()
 
     if(!vars.is_sealed) {
         $('.js-unsealed-warn').show();
+        $('.js-privkey').text(vars.pk);
     }
+
 
     // bitcoin addr
     $('.js-addr').text(vars.ad);
@@ -360,7 +363,7 @@ function do_v2_checks(vars, el, FAIL)
 
     // Simple syntax-only check: expect p256 curve pubkey in the cert.
     if(cert.subjectPublicKeyInfo.algorithm.algorithm_id == '1.2.840.10045.2.1') {
-        $('<li>Has unit certificate.</li>').appendTo(el);
+        //boring//$('<li>Has unit certificate.</li>').appendTo(el);
     } else {
         return FAIL("Wrong key type");
     }
@@ -420,40 +423,20 @@ function do_v2_checks(vars, el, FAIL)
     window.crypto.getRandomValues(numin);
 
     var pp = put_n_get_sig(od_dev, 'f', numin, 64+32);
-    pp.then(function(response) {
-            console.log("Response(Sig+nonce) = " + encode_hex(response));
 
-            if(check_signature(pubkey, numin, response, vars)) {
-                $('<li>Correct signature by anti-counterfeiting chip.</li>').appendTo(el);
-            } else {
-                FAIL("Signature fail for 508a");
-            }
+    pp.then(function(response) {
+        console.log("Response(Sig+nonce) = " + encode_hex(response));
+
+        if(check_signature(pubkey, numin, response, vars)) {
+            $('<li>Correct signature by anti-counterfeiting chip.</li>').appendTo(el);
+        } else {
+            FAIL("Signature fail for 508a");
+        }
     }).catch(function() {
         FAIL("Signature didn't happen");
     });
     
     return pp;
-/*
-    put_value(od_dev, 'f', numin);
-    console.log("Numin = " + encode_hex(numin));
-
-    // device needs 200ms signing time
-    setTimeout(function() {
-        get_value(od_dev, 4, 64+32, function(rc, response) {
-            if(rc) {
-                FAIL("Signature didn't happen");
-            } else {
-                console.log("Response(Sig+nonce) = " + encode_hex(response));
-
-                if(check_signature(pubkey, numin, response, vars)) {
-                    $('<li>Correct signature by anti-counterfeiting chip.</li>').appendTo(el);
-                } else {
-                    FAIL("Signature fail for 508a");
-                }
-            }
-        });
-    }, 200);
-*/
 }
 
 function check_btc_signature(address, msg, response)
@@ -503,9 +486,11 @@ function start_verify(vars)
 
     $('.js-verified-good').hide()
     $('.js-verified-bad').hide()
+    $('.js-verified-spinner').show()
 
     FAIL = function(msg) {
         console.log("FAILED verification: " + msg);
+        $('.js-verified-spinner').hide()
         $('.js-verified-good').hide();
         $('.js-verified-bad').show();
     }
@@ -521,8 +506,10 @@ function start_verify(vars)
     }
 
     pp.then(function() {
+        $('.js-verified-spinner').hide()
         if(!$('.js-verified-bad').is(":visible")) {
             $('.js-verified-good').show()
+            $('button.js-if-verified').removeClass('disabled');
         }
     });
 }
@@ -551,6 +538,7 @@ function have_permission(result)
       function(devices) {
         if (!devices || !devices.length) {
           console.log('Device not yet found');
+          reset_ui('show');
           return;
         }
         dev_inserted(devices[0]);
@@ -599,16 +587,21 @@ function dev_inserted(dev)
     });
 }
 
+
 document.addEventListener('copy', function(e){
-    if(!current_device || !current_device.ad) return;
-
-    var addr = current_device.ad;
-
-    e.clipboardData.setData('text/plain', addr);
+    e.clipboardData.setData('text/plain', CLIPBOARD);
     e.preventDefault();
 });
 function copy_clipboard()
 {
+    if(!current_device || !current_device.ad) return;
+    CLIPBOARD = current_device.ad;
+    document.execCommand('copy');
+}
+function copy_pk_clipboard()
+{
+    if(!current_device || !current_device.pk) return;
+    CLIPBOARD = current_device.pk;
     document.execCommand('copy');
 }
 
@@ -644,8 +637,19 @@ if(chrome.permissions) {
 }
 
 
+function go_explore()
+{
+    var addr = current_device.ad;
+    var w = $('.js-which-bce').dropdown('get value').replace('ADDR', addr);
+    console.log(w);
+
+    window.open(w, 'opendime-bce');
+}
 
 $('select.dropdown').dropdown();
 $('button.js-start-pick').click(pick_keys);
 $('button.js-copy-clipboard').click(copy_clipboard);
+$('button.js-copy-pk-clipboard').click(copy_pk_clipboard);
+$('.js-version').text(chrome.runtime.getManifest().version);
 
+$('.js-explore-btn').click(go_explore)

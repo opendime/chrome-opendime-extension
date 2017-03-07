@@ -13,12 +13,6 @@
   <script src="libs/pkijs/common.js"></script>
   <script src="libs/pkijs/x509_schema.js"></script>
   <script src="libs/pkijs/x509_simpl.js"></script>
-<!--
-  <script src="libs/pkijs/cms_schema.js"></script>
-  <script src="libs/pkijs/cms_simpl.js"></script>
-  <script src="libs/pkijs/ocsp_tsp_schema.js"></script>
-  <script src="libs/pkijs/ocsp_tsp_simpl.js"></script>
--->
   <script src="libs/elliptic.js"></script>
   <script src="libs/btc.js"></script>
   <script src="chain.js"></script>
@@ -40,15 +34,21 @@
   </div>
 
   <div class="ui basic modal" id="nada-modal">
-    <div class="header">Insert Opendime</div>
+    <div class="header">
+      <i class="big usb icon"></i>
+      &nbsp;&nbsp;&nbsp;<i class="right arrow icon"></i>&nbsp;
+      <i class="huge laptop icon"></i>
+    </div>
     <div class="content">
       <p>
-        Please insert the Opendime into any USB socket.
+        Please insert Opendime into any USB socket.
       </p>
     </div>
+<!--
     <div class="actions">
       <button class="ui approve button">Learn More</button>
     </div>
+-->
   </div>
 
   <div class="ui basic modal" id="picking-modal">
@@ -67,8 +67,14 @@
   </div>
 
   <div class="ui row">
-    <img src="img/opendime-logo-nav.png" style="margin-bottom:20px;">
-    <br>
+    <div class="ui two column stackable grid">
+      <div class="thirteen wide column">
+        <img src="img/opendime-logo-nav.png">
+      </div>
+      <div class="three wide column">
+        <p class="text-muted">version <span class="js-version">9.9.9</span></p>
+      </div>
+    </div>
   </div>
 
   <div class="ui two column stackable grid">
@@ -83,7 +89,20 @@
           <code class="js-stateful js-addr btc-addr"></code>
         </div>
         <div class="extra content">
-          <button class="ui labeled icon button small js-copy-clipboard">
+          <button class="ui labeled icon button small js-copy-clipboard js-if-verified">
+              <i class="clipboard icon"></i> Copy to clipboard
+          </button>
+        </div>
+
+        <div class="content js-unsealed-warn" style="display:none">
+          <h5>
+            <i class="fitted warning sign icon"></i>
+              Private Key
+            <i class="fitted warning sign icon"></i> 
+          </h5>
+          <code class="js-stateful js-privkey btc-privkey" title="WIF format private key"></code>
+          <br>
+          <button class="ui labeled icon button small js-copy-pk-clipboard js-if-verified disabled">
               <i class="clipboard icon"></i> Copy to clipboard
           </button>
         </div>
@@ -99,7 +118,7 @@
             Unsealed!
           </div>
           <p>
-            <b>DO NOT</b> send more funds to this address or accept this hardware as payment.
+            <b>DO NOT</b> send funds to this address or accept this hardware as payment.
           </p>
         </div>
       </div>
@@ -130,18 +149,21 @@
         <div class="ui form">
           <div class="two fields">
             <div class="field">
-                  <select class="dropdown">
-                      <option value="opendime">Opendime.com</option>
-                      <option value="trail">Blocktrail</option>
-                      <option value="dot-info">Blockchain.info</option>
-                      <option value="blockr">Blockr.io</option>
-                      <option value="local">Local Bitcoins</option>
-                      <option value="charts">BitInfo Charts</option>
-                      <option value="bip122">BIP122 Link</option>
-                  </select>
+              <select class="dropdown js-which-bce">
+                <option value="https://opendime.com/balance/ADDR">Opendime.com</option>
+                <option value="https://www.blocktrail.com/BTC/address/ADDR">Blocktrail</option>
+                <option value="https://blockchain.info/address/ADDR">Blockchain.info</option>
+                <option value="https://btc.blockr.io/address/info/ADDR">Blockr.io</option>
+                <option value="https://localbitcoinschain.com/address/ADDR">Local Bitcoins</option>
+                <option value="https://bitinfocharts.com/bitcoin/address/ADDR"
+                                >BitInfo Charts</option>
+                <option value="blockchain:/address/ADDR">BIP122 Link</option>
+              </select>
             </div>
             <div class="field">
-                <button class="ui button blue"><i class="external link icon"></i> Check Balance</button>
+              <button class="ui button blue js-explore-btn js-if-verified disabled">
+                <i class="external link icon"></i> Check Balance
+              </button>
             </div>
           </div>
         </div>
@@ -166,6 +188,14 @@
           <div class="header">
           <i class="cancel icon"></i>
             Failed Verification!
+          </div>
+        </div>
+      </div>
+      <div class="ui mini compact message js-verified-spinner" style="display:none">
+        <div class="content">
+          <div class="header">
+          <i class="big spinner loading icon"></i>
+            Checking...
           </div>
         </div>
       </div>

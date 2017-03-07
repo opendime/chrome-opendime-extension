@@ -1,7 +1,7 @@
 {
   "name": "Opendime Access",
   "description": "Easily verify, load and spend using the Opendime™ Bitcoin hardware wallet.",
-  "version": "0.1",
+  "version": "0.0.1",
   "manifest_version": 2,
   "minimum_chrome_version": "23",
   "author": "Coinkite Inc.",

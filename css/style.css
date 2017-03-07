@@ -15,6 +15,15 @@ code.btc-addr {
     text-align: center;
 }
 
+code.btc-privkey {
+    text-align: center;
+    word-wrap: break-word;
+}
+
 code.inline {
     font-size: 70%;
+}
+
+.text-muted {
+    opacity: .50;
 }

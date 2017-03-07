@@ -25,13 +25,14 @@ for years anyway...
 - <https://davidshimjs.github.io/qrcodejs/> for QR code rendering
 - <http://pkijs.org/> Certificate stuff
 - <https://github.com/indutny/elliptic> EC curve stuff
+- <https://github.com/bitcoinjs/bitcoinjs-lib> Bitcoin stuff
 
 # Useful Chrome internal links
 
 - <chrome://extensions> keep open all the dev time
 - <chrome://device-log> lists USB events!
 
-# HTML and Front End Devs...
+## For HTML and Front End Devs
 
 - look at the end of `code.js` for some things that can be commented one
   way or the other; you can make it display test data for most cases
@@ -48,10 +49,10 @@ open main.html
 
 To debug/change it as an extension, go to `chrome://extensions/` and...
 
-- click on "Developer mode"
+- click "Developer mode"
 - click "Load upacked extension"
 - give it this directory (ie. where `manifest.json` is located)
 - Use the Launch and/or Reload buttons
-- once installed, will also pop up if opendime is inserted
+- once installed, will also pop up any time an opendime is inserted
 
 
