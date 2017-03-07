@@ -275,13 +275,12 @@ function stringToArrayBuffer(str)
 
 function check_signature(pubkey, numin, response, vars)
 {
-    // NOTE: response is 64 bytes of r+s, then 32 bytes of nonce picked by the chip.
-    var toArray = elliptic.utils.toArray;               // misc to array
-    var parseBytes = elliptic.utils.parseBytes;         // hex->bytes in array
+    const toArray = elliptic.utils.toArray;               // misc to array
+    const parseBytes = elliptic.utils.parseBytes;         // hex->bytes in array
 
     // Take any binary, hash it and return 32-byte digest as binary (string)
     // see https://github.com/indutny/hash.js
-    var H = function (m) {
+    const H = function (m) {
         return pubkey.ec.hash().update(m).digest();
     };
 
@@ -294,6 +293,9 @@ function check_signature(pubkey, numin, response, vars)
         lock = [1];
     }
 
+    // NOTE: response is 64 bytes of r+s, then 32 bytes of nonce picked by the chip.
+    const sig_r = new Uint8Array(response.slice(0, 32));
+    const sig_s = new Uint8Array(response.slice(32, 64));
     const ae_rand = toArray(new Uint8Array(response.slice(64, 96)));
 
     numin = toArray(numin);
@@ -311,15 +313,163 @@ function check_signature(pubkey, numin, response, vars)
                 SN.slice(2,6), parseBytes('0123'),
                 SN.splice(0, 2), lock,
                 parseBytes('0000'));
-
-    const sig_r = new Uint8Array(response.slice(0, 32));
-    const sig_s = new Uint8Array(response.slice(32, 64));
     
     const sig = {r: sig_r, s: sig_s};
 
     const ok = pubkey.verify(H(body), sig)
 
     return ok;
+}
+
+function do_v2_checks(vars, el, FAIL)
+{
+    const od_dev = vars.dev;
+    var unit_der = atob(vars.cert.replace(/-----(BEGIN|END) CERTIFICATE-----/g,''));
+
+    var asn1 = org.pkijs.fromBER(stringToArrayBuffer(unit_der));
+    var cert = new org.pkijs.simpl.CERT({ schema: asn1.result });
+
+    // Simple syntax-only check: expect p256 curve pubkey in the cert.
+    if(cert.subjectPublicKeyInfo.algorithm.algorithm_id == '1.2.840.10045.2.1') {
+        $('<li>Has unit certificate.</li>').appendTo(el);
+    } else {
+        return FAIL("Wrong key type");
+    }
+
+    // read subject name's serial number
+    var sn = cert.subject.types_and_values[0].value.value_block.value;
+
+    if(sn == vars.sn + '+' + vars.ae) {
+        $('<li>Unit certificate and actual serial numbers match.</li>').appendTo(el);
+    } else {
+        return FAIL("serial # mismatch");
+    }
+
+    // verify certificate is signed properly
+    var asn1 = org.pkijs.fromBER(stringToArrayBuffer(factory_root_cert));
+    var factory = new org.pkijs.simpl.CERT({ schema: asn1.result });
+
+    var asn1 = org.pkijs.fromBER(stringToArrayBuffer(batch_cert));
+    var batch = new org.pkijs.simpl.CERT({ schema: asn1.result });
+
+    var chain = new Array();
+    chain.push(batch);
+    chain.push(factory);
+
+    var untrusted = new Array();
+    untrusted.push(cert);
+
+    var cert_chain_simpl = new org.pkijs.simpl.CERT_CHAIN({
+            trusted_certs: chain,
+            certs: untrusted,
+        });
+
+    cert_chain_simpl.verify().then(
+        function(result)
+        {
+            if(result.result === true) {
+                $('<li>Unit certificate is properly signed by factory.</li>').appendTo(el);
+            } else {
+                return FAIL("Unit certificate does not check out: signature");
+            }
+        },
+        function(error)
+        {
+            return FAIL("Unit certificate does not check out: " + error);
+        }
+    );
+
+    // secp256r1 pubkey, DER encoded (sequence of 2 ints: (x, y) = point).
+    var pubkey_bin = cert.subjectPublicKeyInfo.subjectPublicKey.value_block.value_hex;
+    console.log("Pubkey = " + encode_hex(pubkey_bin));
+
+    var curve = new elliptic.ec('p256');
+    var pubkey = curve.keyFromPublic(encode_hex(pubkey_bin), 'hex');
+
+    // pick our side's nonce
+    var numin = new Uint8Array(20);
+    window.crypto.getRandomValues(numin);
+    put_value(od_dev, 'f', numin);
+
+    console.log("Numin = " + encode_hex(numin));
+
+    // device needs 200ms signing time
+    setTimeout(function() {
+        get_value(od_dev, 4, 64+32, function(rc, response) {
+            if(rc) {
+                FAIL("Signature didn't happen");
+            } else {
+                console.log("Response(Sig+nonce) = " + encode_hex(response));
+
+                if(check_signature(pubkey, numin, response, vars)) {
+                    $('<li>Correct signature by anti-counterfeiting chip.</li>').appendTo(el);
+                } else {
+                    FAIL("Signature fail for 508a");
+                }
+            }
+        });
+    }, 200);
+}
+
+function check_btc_signature(address, msg, response)
+{
+    const toArray = elliptic.utils.toArray;               // misc to array
+    const parseBytes = elliptic.utils.parseBytes;         // hex->bytes in array
+
+    // address, signature, message, network
+    return BTC.bitcoin.message.verify(address, response, msg) 
+}
+
+
+function do_btc_checks(vars, el, FAIL)
+{
+    // check the device has the private key it claims to
+    // .. and that address is valid, etc.
+
+    if(vars.is_fresh || !vars.ad) {
+        // just do nothing but in a promise, gag.
+        return new Promise(function(res, rej) {
+                res();
+        });
+    }
+
+    const od_dev = vars.dev;
+
+    // pick a random nonce to be signed
+    var nonce = new Uint8Array(32);
+    window.crypto.getRandomValues(nonce);
+    put_value(od_dev, 'm', nonce);
+
+    console.log("Msg/Nonce = " + encode_hex(nonce));
+
+    // device needs 200ms signing time
+
+    var pp = new Promise(function(resolve, reject) {
+
+        setTimeout(function() {
+            get_value(od_dev, 4, 65, function(rc, response) {
+                if(rc) {
+                    // takes time, and it fails until ready
+                    reject("usb fail");
+                } else {
+                    console.log("Signature response = " + encode_hex(response));
+                    resolve(response)
+                }
+            });
+        }, 200);
+    });
+
+    pp.then(function(sig) {
+        if(check_btc_signature(vars.ad, nonce, sig)) {
+            $('<li>Bitcoin address verified with signed message.</li>').appendTo(el);
+        } else {
+            FAIL("Signature fail for bitcoin");
+        }
+    }, function(err) {
+        FAIL("Signature never finished/failed");
+    });
+
+    return pp;
 }
 
 function start_verify(vars)
@@ -338,100 +488,14 @@ function start_verify(vars)
         $('.js-verified-bad').show();
     }
 
-    var od_dev = vars.dev;
+    // can usually check the bitcoin signatures
+    step1 = do_btc_checks(vars, el, FAIL);
 
-    if(!vars.is_fresh) {
-        // can check the bitcoin signatures
-    }
-    
     if(!vars.is_v1) {
         // do the new hard stuff
-
-        var unit_der = atob(vars.cert.replace(/-----(BEGIN|END) CERTIFICATE-----/g,''));
-
-        var asn1 = org.pkijs.fromBER(stringToArrayBuffer(unit_der));
-        var cert = new org.pkijs.simpl.CERT({ schema: asn1.result });
-
-        // Simple syntax-only check: expect p256 curve pubkey in the cert.
-        if(cert.subjectPublicKeyInfo.algorithm.algorithm_id == '1.2.840.10045.2.1') {
-            $('<li>Has unit certificate.</li>').appendTo(el);
-        } else {
-            FAIL("Wrong key type");
-        }
-
-        // read subject name's serial number
-        var sn = cert.subject.types_and_values[0].value.value_block.value;
-
-        if(sn == vars.sn + '+' + vars.ae) {
-            $('<li>Unit certificate and actual serial numbers match.</li>').appendTo(el);
-        } else {
-            FAIL("serial # mismatch");
-        }
-
-        // verify certificate is signed properly
-        var asn1 = org.pkijs.fromBER(stringToArrayBuffer(factory_root_chain));
-        var factory = new org.pkijs.simpl.CERT({ schema: asn1.result });
-
-        var asn1 = org.pkijs.fromBER(stringToArrayBuffer(batch_cert));
-        var batch = new org.pkijs.simpl.CERT({ schema: asn1.result });
-
-        var chain = new Array();
-        chain.push(batch);
-        chain.push(factory);
-
-        var untrusted = new Array();
-        untrusted.push(cert);
-
-        var cert_chain_simpl = new org.pkijs.simpl.CERT_CHAIN({
-                trusted_certs: chain,
-                certs: untrusted,
-            });
-
-        cert_chain_simpl.verify().then(
-            function(result)
-            {
-                if(result.result === true) {
-                    $('<li>Unit certificate is properly signed by factory.</li>').appendTo(el);
-                } else {
-                    FAIL("Unit certificate does not check out: signature");
-                }
-            },
-            function(error)
-            {
-                FAIL("Unit certificate does not check out: " + error);
-            }
-        );
-
-        // secp256r1 pubkey, DER encoded (sequence of 2 ints: (x, y) = point).
-        var pubkey_bin = cert.subjectPublicKeyInfo.subjectPublicKey.value_block.value_hex;
-        console.log("Pubkey = " + encode_hex(pubkey_bin));
-
-        var curve = new elliptic.ec('p256');
-        var pubkey = curve.keyFromPublic(encode_hex(pubkey_bin), 'hex');
-
-        // pick our side's nonce
-        var numin = new Uint8Array(20);
-        window.crypto.getRandomValues(numin);
-        put_value(od_dev, 'f', numin);
-
-        console.log("Numin = " + encode_hex(numin));
-
-        // device needs 200ms signing time
-        setTimeout(function() {
-            get_value(od_dev, 4, 64+32, function(rc, response) {
-                if(rc) {
-                    FAIL("Signature didn't happen");
-                } else {
-                    console.log("Response(Sig+nonce) = " + encode_hex(response));
-
-                    if(check_signature(pubkey, numin, response, vars)) {
-                        $('<li>Correct signature by anti-counterfeiting chip.</li>').appendTo(el);
-                    } else {
-                        FAIL("Signature fail for 508a");
-                    }
-                }
-            });
-        }, 200);
+        step1.then(function() {
+            do_v2_checks(vars, el, FAIL);
+        });
     }
 
     setTimeout(function() {
