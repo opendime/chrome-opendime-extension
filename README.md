@@ -1,22 +1,31 @@
-# Background
+# What is this?
 
-Chrome "apps" are depricated and going away. However, "extensions"
-do not support USB, so we are an "app" today. Still, it's listed
-under 'extensions' in all Chrome UI (present version)... But since
-we are an "app", the contents of `manifest.json` is quite limited.
+Lots of us use Chrome everyday as our browser, and a Chrome
+app/extension can be given permission to connect to your USB devices.
+Once we heard this, we had to make this extension that communicates
+with Opendime over USB.
 
-Also the top of every page in the docs warns us...
+This extension can:
+- load the random numbers (256k bytes) to initialize new Opendimes
+- read the bitcoin payment address, and link to public block explorers
+- perform an in-depth verification of the Opendime, including:
+    - bitcoin messages signature (using a unique nonce each time)
+    - factory certificate verification
+    - verification by signed message (with nonce) to the anti-counterfieting chip
+- be easy to use
 
-_Important: Chrome will be removing support for Chrome Apps on
-Windows, Mac, and Linux. Chrome OS will continue to support Chrome
-Apps. Additionally, Chrome and the Web Store will continue to support
-extensions on all platforms. Read the announcement and learn more
-about migrating your app._
+Once installed, all of the above is done just by plugging in an Opendime!
 
-Timeline for app non-support is 2018, and WebUSB won't be ready
-for years anyway...
+# How to Install
 
-# References
+Go to the Chrome Web Store, and click **Add Extension**, and you're done!
+
+[Get the Opendime App here](https://chrome.google.com/webstore/detail/opendime-app/nfmngebojjibkjhffecplcdeagndcahl)
+
+
+# Web References
+
+## Submodules / Components used
 
 - <https://developer.chrome.com/apps> top level docs
 - <https://developer.chrome.com/apps/app_usb> USB interface stuff
@@ -27,7 +36,7 @@ for years anyway...
 - <https://github.com/indutny/elliptic> EC curve stuff
 - <https://github.com/bitcoinjs/bitcoinjs-lib> Bitcoin stuff
 
-# Useful Chrome internal links
+## Useful Chrome internal links
 
 - <chrome://extensions> keep open all the dev time
 - <chrome://device-log> lists USB events!
@@ -36,14 +45,14 @@ for years anyway...
 
 - look at the end of `code.js` for some things that can be commented one
   way or the other; you can make it display test data for most cases
+- App window is currently coded to be 840x640px but we can change that. You should
+  work in a similarly-sized window.
 - simply load `main.html` into chrome from the filesystem:
 
 ```
 open main.html
 ```
 
-- app window is currently coded to be 800x600px but we can change that, you should
-  work in a similarly-sized window.
 
 # Debug As Extension.
 
@@ -56,3 +65,20 @@ To debug/change it as an extension, go to `chrome://extensions/` and...
 - once installed, will also pop up any time an opendime is inserted
 
 
+# Life Cycle
+
+Chrome "apps" are depricated and going away. However, "extensions"
+do not support USB, so we are an "app" today. Still, it's listed
+under 'extensions' in all Chrome UI (present version), but since
+we are an "app", the contents of `manifest.json` is quite limited.
+
+Also the top of every page in the google docs, they warn us:
+
+_Important: Chrome will be removing support for Chrome Apps on
+Windows, Mac, and Linux. Chrome OS will continue to support Chrome
+Apps. Additionally, Chrome and the Web Store will continue to support
+extensions on all platforms. Read the announcement and learn more
+about migrating your app._
+
+Timeline for app non-support is 2018, and WebUSB won't be ready
+for years anyway. Let's take it one day at a time.
