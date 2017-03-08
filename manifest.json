@@ -1,9 +1,9 @@
 {
   "name": "Opendime App",
   "description": "Easily verify, load and spend using the Opendime™ Bitcoin hardware wallet.",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "manifest_version": 2,
-  "minimum_chrome_version": "23",
+  "minimum_chrome_version": "49",
   "author": "Coinkite Inc.",
   "externally_connectable": {
     "ids": []
@@ -16,6 +16,8 @@
   "icons": {
     "512": "img/logo-512.png"
   },
+  "current_locale": "en_US",
+  "default_locale": "en",
   "permissions": [
     "usb",
     "clipboardWrite"
