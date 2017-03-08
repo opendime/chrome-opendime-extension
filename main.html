@@ -94,7 +94,7 @@
         <div class="content js-unsealed-warn" style="display:none">
           <h5>
             <i class="fitted warning sign icon"></i>
-              Private Key
+              &nbsp; Private Key &nbsp;
             <i class="fitted warning sign icon"></i> 
           </h5>
           <code class="js-stateful js-privkey btc-privkey" title="WIF format private key"></code>
@@ -190,14 +190,20 @@
             Failed Verification. Click to Retry.
       </button>
 
+<!--
       <div class="ui mini compact message js-verified-spinner" style="display:none">
         <div class="content">
           <div class="header">
-          <i class="big spinner loading icon"></i>
+          <i class="spinner loading icon"></i>
             Checking...
           </div>
         </div>
       </div>
+-->
+      <p class="js-verified-spinner" style="display:none">
+          <i class="spinner loading icon"></i>
+            Checking...
+      </p>
 
 
     </div>

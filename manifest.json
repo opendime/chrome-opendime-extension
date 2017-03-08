@@ -16,8 +16,6 @@
   "icons": {
     "512": "img/logo-512.png"
   },
-  "current_locale": "en_US",
-  "default_locale": "en",
   "permissions": [
     "usb",
     "clipboardWrite"

@@ -656,6 +656,16 @@ function go_explore()
     window.open(w, 'opendime-bce');
 }
 
+function click_href(e)
+{
+    var el = $(e.target);
+    var url = el.attr('href');
+
+    e.preventDefault();
+
+    window.open(url, 'ext-link');
+}
+
 $('select.dropdown').dropdown();
 $('button.js-start-pick').click(pick_keys);
 $('.js-reverify-btn').click(reverify_btn);
@@ -664,12 +674,5 @@ $('button.js-copy-pk-clipboard').click(copy_pk_clipboard);
 $('.js-version').text(chrome.runtime.getManifest().version);
 
 $('.js-explore-btn').click(go_explore)
+$('a').click(click_href)
 
-/* TODO:
-
-- make topbar link work
-- leftside pin line missing
-- spinner + checking not perfect
-
-
-*/
