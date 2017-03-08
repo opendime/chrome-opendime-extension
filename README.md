@@ -36,6 +36,8 @@ Go to the Chrome Web Store, and click **Add Extension**, and you're done!
 - <https://developer.chrome.com/apps/app_usb> USB interface stuff
 - <https://developer.chrome.com/apps/api_index> useful index page
 - <http://semantic-ui.com/examples/theming.html> Semantic UI CSS cheatsheet
+- Specific version of Sematic UI: Verion 2.2.9 taken
+  from <https://github.com/Semantic-Org/Semantic-UI-CSS/releases>
 - <https://davidshimjs.github.io/qrcodejs/> for QR code rendering
 - <http://pkijs.org/> x.509 ertificate stuff
 - <https://github.com/indutny/elliptic> EC curve stuff
