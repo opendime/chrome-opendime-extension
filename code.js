@@ -257,7 +257,10 @@ function reset_ui(show_empty)
     $('button.js-if-verified').addClass('disabled');
     $('button.js-copy-clipboard').hide();
 
-    $('#nada-modal').modal(show_empty);
+    $('#nada-modal').modal({
+            closable: false,
+            duration: 0,
+        }).modal(show_empty);
 
     if(QR_code) {
         $('#main-qr').empty();
