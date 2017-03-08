@@ -22,6 +22,9 @@ Go to the Chrome Web Store, and click **Add Extension**, and you're done!
 
 [Get the Opendime App here](https://chrome.google.com/webstore/detail/opendime-app/nfmngebojjibkjhffecplcdeagndcahl)
 
+# Screen Shot
+
+[!](screen-shot.png)
 
 # Web References
 
