@@ -1,11 +1,12 @@
 # What is this?
 
-Lots of us use Chrome everyday as our browser, and a Chrome
-app/extension can be given permission to connect to your USB devices.
+We all us use Chrome everyday, and yet we just discovered that Chrome
+extensions can be given permission to connect to your USB devices!
 Once we heard this, we had to make this extension that communicates
 with Opendime over USB.
 
 This extension can:
+
 - load the random numbers (256k bytes) to initialize new Opendimes
 - read the bitcoin payment address, and link to public block explorers
 - perform an in-depth verification of the Opendime, including:
@@ -24,7 +25,8 @@ Go to the Chrome Web Store, and click **Add Extension**, and you're done!
 
 # Screen Shot
 
-[!](screen-shot.png)
+![Opendime App screen shot](screen-shot.png)
+
 
 # Web References
 
@@ -33,9 +35,9 @@ Go to the Chrome Web Store, and click **Add Extension**, and you're done!
 - <https://developer.chrome.com/apps> top level docs
 - <https://developer.chrome.com/apps/app_usb> USB interface stuff
 - <https://developer.chrome.com/apps/api_index> useful index page
-- <http://semantic-ui.com/examples/theming.html> Sematic UI CSS cheatsheet
+- <http://semantic-ui.com/examples/theming.html> Semantic UI CSS cheatsheet
 - <https://davidshimjs.github.io/qrcodejs/> for QR code rendering
-- <http://pkijs.org/> Certificate stuff
+- <http://pkijs.org/> x.509 ertificate stuff
 - <https://github.com/indutny/elliptic> EC curve stuff
 - <https://github.com/bitcoinjs/bitcoinjs-lib> Bitcoin stuff
 
@@ -62,7 +64,7 @@ open main.html
 To debug/change it as an extension, go to `chrome://extensions/` and...
 
 - click "Developer mode"
-- click "Load upacked extension"
+- click "Load unpacked extension"
 - give it this directory (ie. where `manifest.json` is located)
 - Use the Launch and/or Reload buttons
 - once installed, will also pop up any time an opendime is inserted
@@ -70,7 +72,7 @@ To debug/change it as an extension, go to `chrome://extensions/` and...
 
 # Life Cycle
 
-Chrome "apps" are depricated and going away. However, "extensions"
+Chrome "apps" are depreciated and going away. However, "extensions"
 do not support USB, so we are an "app" today. Still, it's listed
 under 'extensions' in all Chrome UI (present version), but since
 we are an "app", the contents of `manifest.json` is quite limited.
@@ -84,4 +86,4 @@ extensions on all platforms. Read the announcement and learn more
 about migrating your app._
 
 Timeline for app non-support is 2018, and WebUSB won't be ready
-for years anyway. Let's take it one day at a time.
+for years anyway. Let's just take it one day at a time.
