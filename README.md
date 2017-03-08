@@ -87,3 +87,15 @@ about migrating your app._
 
 Timeline for app non-support is 2018, and WebUSB won't be ready
 for years anyway. Let's just take it one day at a time.
+
+# NW.js
+
+This app works well with [NW.js](https://nwjs.io/) without any changes.
+Going forward, a few changes would fix URL openning and improve the native
+menus and such.
+
+To try it with NW.js, first download NW.js for your platform. Then
+run the executable (`NW.exe` or `nwjs`) from this directory
+with `.` (just dot) as the first argument.
+
+
