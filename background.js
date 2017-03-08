@@ -1,8 +1,10 @@
 function open(dev) {
   chrome.app.window.create('main.html', {
     innerBounds: {
-      width: 800,
-      height: 868
+      width: 840,
+      minWidth: 840,
+      height: 640,
+      minHeight: 640
     },
     id: "OpendimeApp-main" });
 }
