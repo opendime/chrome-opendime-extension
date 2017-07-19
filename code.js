@@ -359,6 +359,11 @@ function check_signature(pubkey, numin, response, vars)
 function do_v2_checks(vars, el, FAIL)
 {
     const od_dev = vars.dev;
+
+    if(vars.cert.search('\xff') != -1) {
+        return FAIL("Unserialized unit (no unit cert yet)");
+    }
+
     var unit_der = atob(vars.cert.replace(/-----(BEGIN|END) CERTIFICATE-----/g,''));
 
     var asn1 = org.pkijs.fromBER(stringToArrayBuffer(unit_der));
