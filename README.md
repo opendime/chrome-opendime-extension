@@ -1,6 +1,6 @@
 # What is this?
 
-We all us use Chrome everyday, and yet we just discovered that Chrome
+We all use Chrome everyday, and yet we just discovered that Chrome
 extensions can be given permission to connect to your USB devices!
 Once we heard this, we had to make this extension that communicates
 with Opendime over USB.
@@ -22,6 +22,9 @@ Once installed, all of the above is done just by plugging in an Opendime!
 Go to the Chrome Web Store, and click **Add Extension**, and you're done!
 
 [Get the Opendime App here](https://chrome.google.com/webstore/detail/opendime-app/nfmngebojjibkjhffecplcdeagndcahl)
+
+Problem: Chrome no longer support extensions on any OS other than
+ChromeOS. See notes below.
 
 # Screen Shot
 
@@ -54,7 +57,7 @@ Go to the Chrome Web Store, and click **Add Extension**, and you're done!
   way or the other; you can make it display test data for most cases
 - App window is currently coded to be 840x640px but we can change that. You should
   work in a similarly-sized window.
-- simply load `main.html` into chrome from the filesystem:
+- simply load `main.html` into chrome from the filesystem, and most things work:
 
 ```
 open main.html
@@ -88,16 +91,16 @@ extensions on all platforms. Read the announcement and learn more
 about migrating your app._
 
 Timeline for app non-support is 2018, and WebUSB won't be ready
-for years anyway. Let's just take it one day at a time.
+for years. Let's just take it one day at a time.
 
 # NW.js
 
 This app works well with [NW.js](https://nwjs.io/) without any changes.
-Going forward, a few changes would fix URL openning and improve the native
+Going forward, a few changes would fix URL opening and improve the native
 menus and such.
 
 To try it with NW.js, first download NW.js for your platform. Then
-run the executable (`NW.exe` or `nwjs`) from this directory
+run the executable (`NW.exe` or `nwjs`) from inside this directory
 with `.` (just dot) as the first argument.
 
 
