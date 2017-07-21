@@ -23,7 +23,7 @@ def set_debug_value(dev, code, expect_works=True, data=None):
         data_or_wLength=(data if data is not None else 0))
     
 */
-function get_value(od_dev, index, max_resp, callback)
+function get_value(od_dev, index, max_resp, callback, arg1)
 {
     var ti = {
         "requestType": "vendor",
@@ -31,7 +31,7 @@ function get_value(od_dev, index, max_resp, callback)
         "direction": "in",
         "request": 0,
         "value": index,
-        "index": 0,
+        "index": arg1 || 0,
         "length": max_resp,
         "data": new ArrayBuffer(max_resp)
     };
@@ -181,11 +181,23 @@ function probe_opendime(od_dev, serial_number)
             vars.is_v1 = true;
         } else {
             vars.ae = encode_hex(d);
+
+            // read unit.crt
             get_value(od_dev, 7, 1000, function(rc, d) {
                 if(!rc) {
                     vars.cert = decode_utf8(d);
                 }
             });
+
+            // read chain.crt
+            vars.chain_crt = '';
+            for(var offset=0; offset<8; offset++) {
+                get_value(od_dev, 11, 512, function(rc, d) {
+                    if(!rc) {
+                        vars.chain_crt += decode_utf8(d);
+                    }
+                }, offset);
+            }
         }
     });
 
@@ -389,18 +401,24 @@ function do_v2_checks(vars, el, FAIL)
     var asn1 = org.pkijs.fromBER(stringToArrayBuffer(factory_root_cert));
     var factory = new org.pkijs.simpl.CERT({ schema: asn1.result });
 
+    var batch_cert = batch_1_cert;
+    if(vars.chain_crt) {
+        // Use *only* the batch cert provided by device. Ignore factory root cert.
+        batch_cert = atob(vars.chain_crt.split(/-----(BEGIN|END) CERTIFICATE-----/g)[6]);
+    }
+
     var asn1 = org.pkijs.fromBER(stringToArrayBuffer(batch_cert));
     var batch = new org.pkijs.simpl.CERT({ schema: asn1.result });
 
-    var chain = new Array();
-    chain.push(batch);
-    chain.push(factory);
+    var trusted = new Array();
+    trusted.push(factory);
 
     var untrusted = new Array();
     untrusted.push(cert);
+    untrusted.push(batch);
 
     var cert_chain_simpl = new org.pkijs.simpl.CERT_CHAIN({
-            trusted_certs: chain,
+            trusted_certs: trusted,
             certs: untrusted,
         });
 
