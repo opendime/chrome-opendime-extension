@@ -27,3 +27,11 @@ code.inline {
 .text-muted {
     opacity: .50;
 }
+
+.cointype-label {
+    margin-left: 16px !important;
+}
+
+.opendime-store-link {
+    color: #E1645F;
+}

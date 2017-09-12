@@ -64,12 +64,12 @@
 
   <div class="ui row" style="margin-bottom:10px;">
     <div class="ui two column stackable grid">
-      <div class="eleven wide column">
-        <img src="img/opendime-logo-nav.png">
+      <div class="seven wide column">
+        <img src="img/opendime-logo-nav.png" style="float: left">
       </div>
-      <div class="five wide column" style="text-align:right;">
+      <div class="nine wide column" style="text-align:right;">
 
-        <a class="ui negative basic button" style="margin-top:10px;"
+        <a class="ui negative basic button" style="margin-top:10px; box-shadow: 0 0 0 0 #fff inset!important"
                 href="https://opendime.com/"><i class="icon cart"></i>Get more at Opendime.com!</a>
       </div>
     </div>
@@ -136,7 +136,9 @@
       </div>
 
       <div id="js-get-balance">
-        <h4 class="ui dividing header"> Get Balance </h4>
+        <h4 class="ui dividing header"> Get Balance 
+          <div class="ui black label js-coin-LTC js-coin-dependant">Litecoin</div>
+        </h4>
 
         <p>
           To know the balance of this Opendime, you need to consult online with
@@ -147,7 +149,7 @@
         <div class="ui form">
           <div class="two fields">
             <div class="field">
-              <select class="dropdown js-which-bce">
+              <select class="dropdown js-which-bce-BTC js-coin-BTC js-coin-dependant">
                 <option value="https://opendime.com/balance/ADDR">Opendime.com</option>
                 <option value="https://www.blocktrail.com/BTC/address/ADDR">Blocktrail</option>
                 <option value="https://blockchain.info/address/ADDR">Blockchain.info</option>
@@ -157,6 +159,16 @@
                                 >BitInfo Charts</option>
                 <option value="https://rarepepewallet.com/watch/?addr=ADDR">Rare Pepe Wallet</option>
                 <option value="blockchain:/address/ADDR">BIP122 Link</option>
+              </select>
+
+              <select class="dropdown js-which-bce-LTC js-coin-LTC js-coin-dependant" style="display: none;">
+                <option value="https://opendime.com/LTC/balance/ADDR">Opendime.com</option>
+                <option value="https://live.blockcypher.com/ltc/address/ADDR">BlockCypher</option>
+                <option value="https://chain.so/address/LTC/ADDR">SoChain</option>
+                <option value="https://bitinfocharts.com/litecoin/address/ADDR">BitInfoCharts</option>
+                <option value="https://bchain.info/LTC/addr/ADDR">BChain</option>
+                <option value="https://insight.litecore.io/address/ADDR">LiteCore Insight</option>
+                <option value="blockchain://12a765e31ffd4059bada1e25190f6e98c99d9714d334efa41a195a7e7e04bfe2/address/ADDR" title="Use BIP 122 link to open your favourite block explorer">BIP122 link</option>
               </select>
             </div>
             <div class="field">

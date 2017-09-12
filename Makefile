@@ -11,5 +11,5 @@ zip:
 	zip -r $(TARGET) $(FILES)
 	open -R $(TARGET)
 	@echo 
-	@echo "Did you remember to bump the version number?"
+	@echo "Did you remember to bump the version number? ... " $(VERSION)
 

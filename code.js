@@ -144,19 +144,22 @@ function encode_hex(data)
 /*
 1 | Secret exponent (if unsealed)
 2 | WIF version of private key (if unsealed)
-3 | Bitcoin payment address (if set yet)
+3 | Payment address (if set yet)
 4 | Result of previous signature request (`m` or `f`), 65 or 96 bytes
 5 | Firmware checksum (32 bytes)
 6 | Firmware version as a string
 7 | Readback unit x.509 certificate `unit.crt`
 8 | Serial number of ATECC508A chip (6 bytes)
 9 | Readback number of bytes entropy so far (unsigned LE32)
+10| Readback version string (same as `version.txt` file)
+11| Readback `chain.crt` file (use wIndex to interate over 512 byte blocks)
+12| Readback 'BTC' or 'LTC' or other code for currency of device
 */
 
 function probe_opendime(od_dev, serial_number)
 {
     var vars = { sn: serial_number, is_fresh: false, is_sealed: true, is_v1: false,
-                dev: od_dev };
+                dev: od_dev, coin_type: 'BTC' };
 
     // get all bitcoin-related values
     get_value(od_dev, 3, 64, function(rc, d) {
@@ -198,6 +201,13 @@ function probe_opendime(od_dev, serial_number)
                     }
                 }, offset);
             }
+
+            // read currency
+            get_value(od_dev, 12, 8, function(rc, d) {
+                if(!rc) {
+                    vars.coin_type = decode_utf8(d);
+                }
+            });
         }
     });
 
@@ -268,6 +278,7 @@ function reset_ui(show_empty)
     $('#js-get-balance').hide()
     $('button.js-if-verified').addClass('disabled');
     $('button.js-copy-clipboard').hide();
+    $('.js-coin-dependant').hide()
 
     $('#nada-modal').modal({
             closable: false,
@@ -285,6 +296,9 @@ function reset_ui(show_empty)
 function render_state(vars)
 {
     reset_ui('hide');
+
+    // show coin-related fields.
+    $('.js-coin-'+vars.coin_type).show()
 
     if(vars.is_fresh) {
         $('#js-fresh-msg').show()
@@ -493,13 +507,18 @@ function do_btc_checks(vars, el, FAIL)
     var pp = put_n_get_sig(od_dev, 'm', nonce, 65);
 
     return pp.then(function(sig) {
-        if(BTC.bitcoin.message.verify(vars.ad, sig, nonce)) {
-            $('<li>Bitcoin address verified with signed message.</li>').appendTo(el);
+
+        var network = { BTC: BTC.bitcoin.networks.bitcoin,
+                        LTC: BTC.bitcoin.networks.litecoin,
+                    }[vars.coin_type];
+
+        if(BTC.bitcoin.message.verify(vars.ad, sig, nonce, network)) {
+            $('<li>Payment address verified with signed message.</li>').appendTo(el);
         } else {
-            FAIL("Bad signature for bitcoin!");
+            FAIL("Bad signature for coin!");
         }
     }).catch(function(err) {
-        FAIL("Bitcoin signature never finished/failed");
+        FAIL("Payment addr signature never finished/failed");
     });
 }
 
@@ -673,7 +692,8 @@ function reverify_btn()
 function go_explore()
 {
     var addr = current_device.ad;
-    var w = $('.js-which-bce').dropdown('get value').replace('ADDR', addr);
+    var ct = current_device.coin_type;
+    var w = $('.js-which-bce-'+ct).dropdown('get value').replace('ADDR', addr);
     console.log(w);
 
     window.open(w, 'opendime-bce');
