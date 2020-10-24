@@ -23,7 +23,7 @@ Go to the Chrome Web Store, and click **Add Extension**, and you're done!
 
 [Get the Opendime App here](https://chrome.google.com/webstore/detail/opendime-app/nfmngebojjibkjhffecplcdeagndcahl)
 
-Problem: Chrome no longer support extensions on any OS other than
+Problem: Chrome no longer supports extensions on any OS other than
 ChromeOS. See notes below.
 
 # Screen Shot
@@ -42,7 +42,7 @@ ChromeOS. See notes below.
 - Specific version of Sematic UI: Verion 2.2.9 taken
   from <https://github.com/Semantic-Org/Semantic-UI-CSS/releases>
 - <https://davidshimjs.github.io/qrcodejs/> for QR code rendering
-- <http://pkijs.org/> x.509 ertificate stuff
+- <http://pkijs.org/> x.509 certificate stuff
 - <https://github.com/indutny/elliptic> EC curve stuff
 - <https://github.com/bitcoinjs/bitcoinjs-lib> Bitcoin stuff
 
@@ -77,7 +77,7 @@ To debug/change it as an extension, go to `chrome://extensions/` and...
 
 # Life Cycle
 
-Chrome "apps" are depreciated and going away. However, "extensions"
+Chrome "apps" are deprecated and going away. However, "extensions"
 do not support USB, so we are an "app" today. Still, it's listed
 under 'extensions' in all Chrome UI (present version), but since
 we are an "app", the contents of `manifest.json` is quite limited.
